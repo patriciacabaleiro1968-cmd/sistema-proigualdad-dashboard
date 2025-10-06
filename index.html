@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{
       --giz-green:#7FFF00;   /* Cumplida exitosamente */
@@ -15,100 +16,59 @@
       --giz-yellow:#FFFF00;  /* En proceso */
       --giz-gray:#C0C0C0;    /* No puede iniciar o concluir satisfactoriamente */
       --giz-blue:#4169E1;    /* Reprogramado */
-      --ink:#111;
-      --muted:#555;
-      --border:#e5e7eb;
-      --bg:#fff;
-      --maxw:1200px;
+      --ink:#111; --muted:#555; --border:#e5e7eb; --bg:#fff; --maxw:1200px;
     }
-
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji";
-      color:var(--ink);
-      background:var(--bg);
-      line-height:1.4;
-    }
-    header{
-      border-bottom:1px solid var(--border);
-      background:#fff;
-    }
-    .wrap{
-      max-width:var(--maxw);
-      margin:auto;
-      padding:16px 20px;
-    }
-    .hdr{
-      display:flex;
-      align-items:center;
-      gap:16px;
-      justify-content:space-between;
-      flex-wrap:wrap;
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:14px;
-    }
-    .brand img{
-      height:44px; width:auto; object-fit:contain;
-    }
-    .brand h1{
-      margin:0;
-      font-size:20px;
-      font-weight:700;
-      letter-spacing:.2px;
-    }
-    .actions{
-      display:flex; gap:8px; flex-wrap:wrap;
-    }
-    button{
-      padding:10px 14px;
-      border:1px solid var(--border);
-      background:#fff;
-      border-radius:10px;
-      cursor:pointer;
-      font-weight:600;
-    }
-    button:hover{background:#f8f9fb}
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji"; color:var(--ink); background:var(--bg); line-height:1.4; }
+    header{ border-bottom:1px solid var(--border); background:#fff; }
+    .wrap{ max-width:var(--maxw); margin:auto; padding:16px 20px; }
+    .hdr{ display:flex; align-items:center; gap:16px; justify-content:space-between; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:14px; }
+    .brand img{ height:44px; width:auto; object-fit:contain; }
+    .brand h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.2px; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    button, select{ padding:10px 12px; border:1px solid var(--border); background:#fff; border-radius:10px; cursor:pointer; font-weight:600; }
+    button:hover{ background:#f8f9fb }
+    .toolbar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .muted{ color:var(--muted); font-size:14px }
+    .row{ display:grid; grid-template-columns:1fr; gap:16px; }
+    @media(min-width:980px){ .row-2{ grid-template-columns:1fr 1fr; } }
 
-    main .wrap{padding-top:12px; padding-bottom:28px;}
-    .card{
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:16px;
-      background:#fff;
-      box-shadow:0 1px 2px rgba(0,0,0,.04);
-    }
-    .card h2{
-      margin:0 0 8px 0;
-      font-size:18px;
-    }
-    .muted{color:var(--muted); font-size:14px}
+    .card{ border:1px solid var(--border); border-radius:14px; padding:16px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .card h2{ margin:0 0 8px 0; font-size:18px; }
 
-    /* Contenedor variable para la altura del gráfico */
-    #chartBox{width:100%; height:420px}
+    .kpis{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    @media(min-width:760px){ .kpis{ grid-template-columns:repeat(5,minmax(0,1fr)); } }
+    .kpi{ border:1px solid var(--border); border-radius:12px; padding:12px; background:#fafafa; text-align:center; }
+    .kpi .dot{ display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:middle; margin-right:6px; }
+    .kpi h3{ margin:6px 0 0 0; font-size:22px; }
 
-    /* Pie institucional solo en impresión/PDF */
-    footer#print-footer{
-      display:none;
-    }
+    #chartBox{ width:100%; height:420px }
 
-    /* Estilos de impresión */
+    table{ width:100%; border-collapse:collapse; }
+    th, td{ border-top:1px solid var(--border); padding:8px 10px; text-align:left; vertical-align:top; }
+    th{ background:#fafafa; }
+    .badge{ display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(0,0,0,.08); background:#fff; }
+    .b-green{ background:var(--giz-green); }
+    .b-yellow{ background:var(--giz-yellow); }
+    .b-red{ background:var(--giz-red); color:#fff; }
+    .b-gray{ background:var(--giz-gray); }
+    .b-blue{ background:var(--giz-blue); color:#fff; }
+
+    /* Cronograma mini-Gantt */
+    .gantt{ display:grid; grid-template-columns:repeat(12,1fr); gap:4px; align-items:center; }
+    .gantt .cell{ height:16px; background:#f0f0f0; border-radius:4px; }
+    .gantt .bar{ height:16px; border-radius:4px; }
+
+    footer#print-footer{ display:none; }
     @media print{
-      @page{ size: A4 landscape; margin: 14mm; }
+      @page{ size:A4 landscape; margin:14mm; }
       header .actions{ display:none !important; }
       a{ text-decoration:none; color:inherit; }
       footer#print-footer{
-        display:block;
-        position:fixed;
-        bottom:6mm; left:0; right:0;
-        text-align:center;
-        font-size:11px; color:#333;
+        display:block; position:fixed; bottom:6mm; left:0; right:0; text-align:center; font-size:11px; color:#333;
       }
-      /* Evitar cortes raros */
-      .card{ break-inside: avoid; }
+      .card{ break-inside:avoid; }
     }
   </style>
 </head>
@@ -116,7 +76,6 @@
   <header>
     <div class="wrap hdr">
       <div class="brand">
-        <!-- Cambia el logo si deseas -->
         <img id="logo-giz" alt="GIZ" src="https://upload.wikimedia.org/wikipedia/commons/0/0d/Deutsche_Gesellschaft_f%C3%BCr_Internationale_Zusammenarbeit_%28GIZ%29_logo.svg">
         <div>
           <h1>Sistema de Monitoreo – ProIgualdad</h1>
@@ -124,6 +83,8 @@
         </div>
       </div>
       <div class="actions">
+        <button id="btnExportCSV">⬇️ CSV</button>
+        <button id="btnExportXLSX">⬇️ XLSX</button>
         <button id="btnPrint" title="Imprime o guarda como PDF">🖨️ Imprimir / PDF</button>
       </div>
     </div>
@@ -131,201 +92,512 @@
 
   <main>
     <div class="wrap">
+      <!-- Filtros -->
+      <div class="card">
+        <h2>Filtros</h2>
+        <div class="toolbar">
+          <label>Año:
+            <select id="fAnio"><option value="">Todos</option></select>
+          </label>
+          <label>Componente:
+            <select id="fComponente"><option value="">Todos</option></select>
+          </label>
+          <label>Estado:
+            <select id="fEstado"><option value="">Todos</option></select>
+          </label>
+          <label>Mes:
+            <select id="fMes"><option value="">Todos</option></select>
+          </label>
+          <label>Responsable:
+            <select id="fResp"><option value="">Todos</option></select>
+          </label>
+          <button id="btnClear">Limpiar filtros</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="card">
+        <h2>KPIs por estado</h2>
+        <div class="kpis">
+          <div class="kpi"><span class="dot" style="background:var(--giz-green)"></span>Cumplida exitosamente<h3 id="kGreen">0</h3></div>
+          <div class="kpi"><span class="dot" style="background:var(--giz-yellow)"></span>En proceso<h3 id="kYellow">0</h3></div>
+          <div class="kpi"><span class="dot" style="background:var(--giz-red)"></span>Atrasada/Interrumpida/En riesgo<h3 id="kRed">0</h3></div>
+          <div class="kpi"><span class="dot" style="background:var(--giz-gray)"></span>No puede iniciar/Concluir<h3 id="kGray">0</h3></div>
+          <div class="kpi"><span class="dot" style="background:var(--giz-blue)"></span>Reprogramado<h3 id="kBlue">0</h3></div>
+        </div>
+      </div>
+
+      <!-- Indicadores (gráfico) -->
       <div class="card">
         <h2>Indicadores (barras horizontales)</h2>
-        <div class="muted">Promedio de <em>porcentaje_cumplimiento</em> por indicador. Etiquetas con saltos automáticos.</div>
+        <div class="muted">Etiquetas abreviadas (solo número del indicador). El tooltip muestra el nombre completo.</div>
         <div id="chartBox">
           <canvas id="chartIndicadores" aria-label="Gráfico de indicadores" role="img"></canvas>
         </div>
       </div>
+
+      <div class="row row-2">
+        <!-- Actividades -->
+        <div class="card">
+          <h2>Actividades</h2>
+          <div class="muted">Tabla con columnas clave y estado con color.</div>
+          <div class="table-wrap">
+            <table id="tblActividades">
+              <thead>
+                <tr>
+                  <th>Año</th>
+                  <th>Mes</th>
+                  <th>Componente</th>
+                  <th>Actividad principal</th>
+                  <th>Subactividad</th>
+                  <th>Tarea específica</th>
+                  <th>Descripción</th>
+                  <th>Responsable</th>
+                  <th>%</th>
+                  <th>Estado</th>
+                  <th>Evidencia</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cronograma -->
+        <div class="card">
+          <h2>Cronograma (mini-Gantt por Actividad principal)</h2>
+          <div class="muted">Cada fila: 12 meses. La barra se pinta en los meses con trabajo declarado.</div>
+          <div id="cronograma"></div>
+        </div>
+      </div>
+
+      <!-- Componentes -->
+      <div class="card">
+        <h2>Componentes (avance promedio)</h2>
+        <div id="componentesGrid" class="row row-2"></div>
+      </div>
     </div>
   </main>
 
-  <!-- Pie solo para PDF/impresión (se rellena con JS justo antes de imprimir) -->
   <footer id="print-footer">
     Reporte generado: <span id="genDate"></span> · Proyecto ProIgualdad (GIZ)
   </footer>
 
   <script>
-    /************************************************************
-     * 1) CONFIGURACIÓN SUPABASE
-     ************************************************************/
+    /**********************
+     * 1) SUPABASE
+     **********************/
     const SUPABASE_URL = "https://xrvxryozthadpzsgmbir.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhydnhyeW96dGhhZHB6c2dtYmlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODA5NjcsImV4cCI6MjA3NDU1Njk2N30.mVDnVaJCiJzSEFJ2ZlHGrtbFk-DZNb61aDcrNf3KsHg";
-
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    /************************************************************
-     * 2) UTILIDADES
-     ************************************************************/
-    // Salta etiquetas largas cada N caracteres en límite de palabra
-    function wrapLabel(str, maxLen = 38){
-      if(!str) return "";
-      const out = [];
-      let line = "";
-      for (const word of String(str).split(" ")){
-        if ((line + word).length > maxLen){
-          out.push(line.trim());
-          line = word + " ";
-        } else {
-          line += word + " ";
-        }
-      }
-      if (line.trim().length) out.push(line.trim());
-      return out;
+    /**********************
+     * 2) CONSTANTES / UTIL
+     **********************/
+    const MES_IDX = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+    const MES_NOMS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+    function getEstadoClass(estado=""){
+      const s = (estado||"").toLowerCase();
+      if (s.includes("reprogram")) return "b-blue";
+      if (s.includes("cumplida")) return "b-green";
+      if (s.includes("proceso")) return "b-yellow";
+      if (s.includes("no puede")) return "b-gray";
+      if (s.includes("atras") || s.includes("interrump") || s.includes("riesg")) return "b-red";
+      // fallback neutro
+      return "";
     }
 
-    // Formateo de fecha local (Bolivia) para el pie de impresión
+    // Devuelve solo el código/número del indicador
+    function shortCode(ind){
+      if(!ind) return "";
+      const s = String(ind).trim();
+      const m = s.match(/^(?:Indicador\s*)?(\d+(?:\.\d+)*)(?=[\s\.:/-]|$)/i);
+      if (m && m[1]) return m[1];
+      return s.slice(0,6).toUpperCase();
+    }
+
     function formatFechaBO(d = new Date()){
       try{
-        const fmt = new Intl.DateTimeFormat("es-BO", {
-          timeZone: "America/La_Paz",
-          year:"numeric", month:"2-digit", day:"2-digit",
-          hour:"2-digit", minute:"2-digit"
-        });
-        return fmt.format(d);
-      }catch(e){
-        return d.toLocaleString();
-      }
+        return new Intl.DateTimeFormat("es-BO", {
+          timeZone:"America/La_Paz", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"
+        }).format(d);
+      }catch{ return d.toLocaleString(); }
     }
 
-    // Ajusta la altura del contenedor del gráfico según cantidad de barras
     function setChartHeightByCount(count){
-      // 28px por barra + 120px de márgenes/títulos
-      const px = Math.max(280, Math.min(1600, (count * 28) + 120));
+      const px = Math.max(260, Math.min(1600, (count * 26) + 120));
       document.getElementById("chartBox").style.height = px + "px";
     }
 
-    /************************************************************
-     * 3) CARGA DE DATOS Y AGRUPACIÓN
-     ************************************************************/
-    async function fetchIndicadores(){
-      // Trae solo las columnas necesarias
+    // CSV util
+    function toCSV(rows){
+      if (!rows.length) return "";
+      const cols = Object.keys(rows[0]);
+      const escape = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
+      const head = cols.map(escape).join(",");
+      const body = rows.map(r => cols.map(c => escape(r[c])).join(",")).join("\n");
+      return head + "\n" + body;
+    }
+
+    // XLSX util (SheetJS)
+    function downloadXLSX(rows, filename){
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "datos");
+      XLSX.writeFile(wb, filename);
+    }
+
+    /**********************
+     * 3) ESTADO APP
+     **********************/
+    let RAW = [];        // todas las filas
+    let FILTERED = [];   // filas filtradas
+    let CHART;           // ref Chart.js
+
+    // Filtros DOM
+    const fAnio = document.getElementById("fAnio");
+    const fComponente = document.getElementById("fComponente");
+    const fEstado = document.getElementById("fEstado");
+    const fMes = document.getElementById("fMes");
+    const fResp = document.getElementById("fResp");
+
+    /**********************
+     * 4) CARGA DATOS
+     **********************/
+    async function loadData(){
       const { data, error } = await supabaseClient
         .from("entradas_form")
-        .select("indicador, porcentaje_cumplimiento");
+        .select("anio_gestion, mes, componente, objetivo, indicador, actividad_principal, subactividad, tarea_especifica, descripcion, responsable, meta, porcentaje_cumplimiento, estado, evidencia_url");
 
       if (error){
         console.error(error);
         alert("Error al cargar datos desde Supabase. Revisa credenciales o permisos.");
         return [];
       }
-
-      // Agrupa por indicador y calcula promedio de porcentaje_cumplimiento
-      const agg = new Map();
-      for (const row of data){
-        const ind = row.indicador || "Sin indicador";
-        const val = Number(row.porcentaje_cumplimiento) || 0;
-        if (!agg.has(ind)) agg.set(ind, { sum:0, n:0 });
-        const obj = agg.get(ind);
-        obj.sum += val; obj.n += 1;
-      }
-
-      const result = Array.from(agg.entries()).map(([indicador, {sum,n}]) => ({
-        indicador,
-        promedio: n ? (sum/n) : 0
-      }));
-
-      // Ordena de mayor a menor avance
-      result.sort((a,b)=> b.promedio - a.promedio);
-      return result;
+      // Normaliza mes → índice/abreviado
+      RAW = (data||[]).map(r => {
+        const mesStr = String(r.mes || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
+        const mIdx = MES_IDX[mesStr] || null;
+        return {...r, _mes_idx:mIdx, _mes_abbr: mIdx ? MES_NOMS[mIdx-1] : ""};
+      });
+      return RAW;
     }
 
-    /************************************************************
-     * 4) DIBUJO DEL GRÁFICO (Chart.js 4) – BARRAS HORIZONTALES
-     ************************************************************/
-    let chartRef;
+    /**********************
+     * 5) FILTROS
+     **********************/
+    function fillFilterOptions(){
+      // Utilidades para listas únicas ordenadas
+      const uniq = arr => [...new Set(arr.filter(v=>v!=null && v!==""))];
+      const setOpts = (sel, values) => {
+        const cur = sel.value;
+        sel.innerHTML = `<option value="">Todos</option>` + values.map(v=>`<option>${v}</option>`).join("");
+        if ([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+      };
 
-    function drawChart(rows){
-      if (chartRef) { chartRef.destroy(); }
+      setOpts(fAnio, uniq(RAW.map(r=>r.anio_gestion)).sort());
+      setOpts(fComponente, uniq(RAW.map(r=>r.componente)).sort());
+      setOpts(fEstado, uniq(RAW.map(r=>r.estado)).sort());
+      setOpts(fMes, uniq(RAW.map(r=>r._mes_abbr)).filter(Boolean).sort((a,b)=>MES_NOMS.indexOf(a)-MES_NOMS.indexOf(b)));
+      setOpts(fResp, uniq(RAW.map(r=>r.responsable)).sort());
+    }
 
-      const labels = rows.map(r => r.indicador);
-      const values = rows.map(r => Number(r.promedio.toFixed(1)));
+    function applyFilters(){
+      FILTERED = RAW.filter(r=>{
+        if (fAnio.value && String(r.anio_gestion) !== String(fAnio.value)) return false;
+        if (fComponente.value && r.componente !== fComponente.value) return false;
+        if (fEstado.value && r.estado !== fEstado.value) return false;
+        if (fMes.value && r._mes_abbr !== fMes.value) return false;
+        if (fResp.value && r.responsable !== fResp.value) return false;
+        return true;
+      });
+    }
 
-      // Ajusta altura del contenedor
-      setChartHeightByCount(labels.length);
+    /**********************
+     * 6) KPIs
+     **********************/
+    function renderKPIs(){
+      const cnt = {green:0,yellow:0,red:0,gray:0,blue:0};
+      for (const r of FILTERED){
+        const cls = getEstadoClass(r.estado);
+        if (cls==="b-green") cnt.green++;
+        else if (cls==="b-yellow") cnt.yellow++;
+        else if (cls==="b-gray") cnt.gray++;
+        else if (cls==="b-blue") cnt.blue++;
+        else cnt.red++;
+      }
+      document.getElementById("kGreen").textContent = cnt.green;
+      document.getElementById("kYellow").textContent = cnt.yellow;
+      document.getElementById("kRed").textContent   = cnt.red;
+      document.getElementById("kGray").textContent  = cnt.gray;
+      document.getElementById("kBlue").textContent  = cnt.blue;
+    }
 
+    /**********************
+     * 7) GRÁFICO INDICADORES
+     **********************/
+    function renderChart(){
+      // Agrupa por indicador y promedio de porcentaje
+      const agg = new Map();
+      for (const r of FILTERED){
+        const indFull = r.indicador || "Sin indicador";
+        const v = Number(r.porcentaje_cumplimiento) || 0;
+        if (!agg.has(indFull)) agg.set(indFull, {sum:0,n:0});
+        const obj = agg.get(indFull); obj.sum+=v; obj.n++;
+      }
+      const rows = Array.from(agg.entries()).map(([indicador,{sum,n}])=>({
+        indicador, code: shortCode(indicador), promedio: n? (sum/n) : 0
+      })).sort((a,b)=> b.promedio - a.promedio);
+
+      const labelsShort = rows.map(r=>r.code);
+      const labelsFull  = rows.map(r=>r.indicador);
+      const values      = rows.map(r=>Number(r.promedio.toFixed(1)));
+
+      setChartHeightByCount(labelsShort.length);
+
+      if (CHART) CHART.destroy();
       const ctx = document.getElementById("chartIndicadores").getContext("2d");
-      chartRef = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [{
-            label: "% promedio de cumplimiento",
-            data: values,
-            backgroundColor: "rgba(65, 105, 225, 0.65)",   // azul suave
-            borderColor: "rgba(65, 105, 225, 1)",
-            borderWidth: 1.2,
-            borderSkipped: false,
-            barThickness: "flex"
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          indexAxis: "y", // ← barras horizontales
-          animation: { duration: 300 },
-          scales: {
-            x: {
-              min: 0,
-              max: 100,
-              grid: { color: "rgba(0,0,0,0.06)" },
-              ticks: {
-                callback: (val) => val + " %",
-                font: { size: 12 }
-              },
-              title: { display:true, text:"Porcentaje de cumplimiento (%)" }
-            },
-            y: {
-              grid: { display:false },
-              ticks: {
-                autoSkip: false,
-                font: { size: 12 },
-                callback: (value, index) => {
-                  // Devuelve la etiqueta envuelta en múltiples líneas
-                  return wrapLabel(labels[index], 38);
-                }
-              }
-            }
+      CHART = new Chart(ctx, {
+        type:"bar",
+        data:{ labels:labelsShort, datasets:[{
+          label:"% promedio de cumplimiento",
+          data:values,
+          backgroundColor:"rgba(65,105,225,0.65)",
+          borderColor:"rgba(65,105,225,1)",
+          borderWidth:1.2,
+          borderSkipped:false,
+          barThickness:"flex"
+        }]},
+        options:{
+          responsive:true, maintainAspectRatio:false, indexAxis:"y",
+          scales:{
+            x:{ min:0, max:100, grid:{color:"rgba(0,0,0,0.06)"},
+                ticks:{ callback:v=>v+" %", font:{size:12}},
+                title:{display:true, text:"Porcentaje de cumplimiento (%)"} },
+            y:{ grid:{display:false}, ticks:{autoSkip:false, font:{size:12}} }
           },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: (items)=> {
-                  const i = items?.[0]?.dataIndex ?? 0;
-                  return labels[i]; // indicador completo en tooltip
-                },
-                label: (item)=> ` ${item.raw}%`
-              }
-            }
+          plugins:{
+            legend:{display:false},
+            tooltip:{ callbacks:{
+              title:(items)=> labelsFull[items?.[0]?.dataIndex ?? 0],
+              label:(it)=> ` ${it.raw}%`
+            }}
           }
         }
       });
     }
 
-    /************************************************************
-     * 5) FLUJO PRINCIPAL
-     ************************************************************/
-    async function init(){
-      // Carga y pinta
-      const rows = await fetchIndicadores();
-      drawChart(rows);
+    /**********************
+     * 8) TABLA ACTIVIDADES
+     **********************/
+    function renderActividades(){
+      const tb = document.querySelector("#tblActividades tbody");
+      tb.innerHTML = "";
+      for (const r of FILTERED){
+        const cls = getEstadoClass(r.estado);
+        const badge = `<span class="badge ${cls}">${r.estado || ""}</span>`;
+        const ev = r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank">Abrir</a>` : "";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.anio_gestion ?? ""}</td>
+          <td>${r._mes_abbr ?? ""}</td>
+          <td>${r.componente ?? ""}</td>
+          <td>${r.actividad_principal ?? ""}</td>
+          <td>${r.subactividad ?? ""}</td>
+          <td>${r.tarea_especifica ?? ""}</td>
+          <td>${r.descripcion ?? ""}</td>
+          <td>${r.responsable ?? ""}</td>
+          <td>${r.porcentaje_cumplimiento ?? ""}</td>
+          <td>${badge}</td>
+          <td>${ev}</td>
+        `;
+        tb.appendChild(tr);
+      }
     }
 
-    // Botón Imprimir / PDF
+    /**********************
+     * 9) CRONOGRAMA (mini-Gantt)
+     **********************/
+    function renderCronograma(){
+      const cont = document.getElementById("cronograma");
+      cont.innerHTML = "";
+
+      // Agrupa por Actividad principal → meses activos (cualquier fila en ese mes)
+      const map = new Map();
+      for (const r of FILTERED){
+        const k = r.actividad_principal || "(Sin actividad)";
+        if (!map.has(k)) map.set(k, new Set());
+        if (r._mes_idx) map.get(k).add(r._mes_idx);
+      }
+
+      // Construye filas
+      map.forEach((meses, act) => {
+        const row = document.createElement("div");
+        row.style.marginBottom = "10px";
+
+        const title = document.createElement("div");
+        title.textContent = act;
+        title.className = "muted";
+        title.style.marginBottom = "4px";
+        row.appendChild(title);
+
+        const grid = document.createElement("div");
+        grid.className = "gantt";
+
+        // columnas de mes
+        for (let i=1;i<=12;i++){
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if (meses.has(i)){
+            const bar = document.createElement("div");
+            bar.className = "bar";
+            bar.style.background = "rgba(65,105,225,.85)";
+            cell.appendChild(bar);
+          }
+          grid.appendChild(cell);
+        }
+
+        // encabezado meses
+        const head = document.createElement("div");
+        head.style.display="grid";
+        head.style.gridTemplateColumns="repeat(12,1fr)";
+        head.style.gap="4px";
+        head.style.marginTop="4px";
+        for (let i=0;i<12;i++){
+          const m = document.createElement("div");
+          m.className="muted";
+          m.style.textAlign="center";
+          m.textContent = MES_NOMS[i];
+          head.appendChild(m);
+        }
+
+        row.appendChild(grid);
+        row.appendChild(head);
+        cont.appendChild(row);
+      });
+    }
+
+    /**********************
+     * 10) COMPONENTES (promedio)
+     **********************/
+    function renderComponentes(){
+      const tgt = document.getElementById("componentesGrid");
+      tgt.innerHTML = "";
+      const agg = new Map();
+      for (const r of FILTERED){
+        const k = r.componente || "(Sin componente)";
+        const v = Number(r.porcentaje_cumplimiento)||0;
+        if (!agg.has(k)) agg.set(k, {sum:0,n:0});
+        const o = agg.get(k); o.sum+=v; o.n++;
+      }
+      const rows = Array.from(agg.entries()).map(([componente,{sum,n}])=>({
+        componente, promedio: n? (sum/n) : 0, items:n
+      })).sort((a,b)=> a.componente.localeCompare(b.componente));
+
+      for (const r of rows){
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <div>
+              <div class="muted">Componente</div>
+              <div style="font-weight:700">${r.componente}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="muted">Promedio</div>
+              <div style="font-size:24px;font-weight:800">${r.promedio.toFixed(1)}%</div>
+              <div class="muted">${r.items} registros</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;height:10px;background:#eee;border-radius:999px;overflow:hidden;">
+            <div style="height:10px;width:${Math.min(100,Math.max(0,r.promedio)).toFixed(1)}%;background:rgba(65,105,225,.9)"></div>
+          </div>
+        `;
+        tgt.appendChild(card);
+      }
+    }
+
+    /**********************
+     * 11) EXPORTAR
+     **********************/
+    function getFilteredForExport(){
+      // Devuelve exactamente las columnas visibles y ordenadas
+      return FILTERED.map(r=>({
+        anio_gestion: r.anio_gestion,
+        mes: r._mes_abbr || r.mes,
+        componente: r.componente,
+        objetivo: r.objetivo,
+        indicador: r.indicador,
+        actividad_principal: r.actividad_principal,
+        subactividad: r.subactividad,
+        tarea_especifica: r.tarea_especifica,
+        descripcion: r.descripcion,
+        responsable: r.responsable,
+        meta: r.meta,
+        porcentaje_cumplimiento: r.porcentaje_cumplimiento,
+        estado: r.estado,
+        evidencia_url: r.evidencia_url
+      }));
+    }
+
+    function exportCSV(){
+      const rows = getFilteredForExport();
+      const csv = toCSV(rows);
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "proigualdad_export.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function exportXLSX(){
+      const rows = getFilteredForExport();
+      downloadXLSX(rows, "proigualdad_export.xlsx");
+    }
+
+    /**********************
+     * 12) RENDER GENERAL
+     **********************/
+    function renderAll(){
+      applyFilters();
+      renderKPIs();
+      renderChart();
+      renderActividades();
+      renderCronograma();
+      renderComponentes();
+    }
+
+    /**********************
+     * 13) INIT
+     **********************/
+    async function init(){
+      await loadData();
+      fillFilterOptions();
+      renderAll();
+    }
+
+    // Eventos filtros
+    [fAnio,fComponente,fEstado,fMes,fResp].forEach(sel=> sel.addEventListener("change", renderAll));
+    document.getElementById("btnClear").addEventListener("click", ()=>{
+      [fAnio,fComponente,fEstado,fMes,fResp].forEach(s=> s.value="");
+      renderAll();
+    });
+
+    // Exportar
+    document.getElementById("btnExportCSV").addEventListener("click", exportCSV);
+    document.getElementById("btnExportXLSX").addEventListener("click", exportXLSX);
+
+    // Imprimir / PDF
     document.getElementById("btnPrint").addEventListener("click", ()=>{
-      // Setear fecha antes de imprimir
       document.getElementById("genDate").textContent = formatFechaBO(new Date());
       window.print();
     });
-
-    // Cuando el usuario usa Ctrl+P u otra vía
     window.addEventListener("beforeprint", ()=>{
       document.getElementById("genDate").textContent = formatFechaBO(new Date());
     });
 
-    // Inicia
     init();
   </script>
 </body>
