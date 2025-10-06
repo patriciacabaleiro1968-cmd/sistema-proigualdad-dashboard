@@ -65,18 +65,12 @@
       </div>
       <div class="rounded-xl bg-white shadow p-4 lg:col-span-2">
         <h2 class="font-semibold mb-3">Filtros</h2>
-        <div class="grid md:grid-cols-6 gap-2">
+        <div class="grid md:grid-cols-5 gap-2">
           <select id="fAnio" class="border rounded-lg px-2 py-2"><option value="">Año</option></select>
           <select id="fComponente" class="border rounded-lg px-2 py-2"><option value="">Componente</option></select>
           <select id="fEstado" class="border rounded-lg px-2 py-2"><option value="">Estado</option></select>
           <select id="fMes" class="border rounded-lg px-2 py-2"><option value="">Mes</option></select>
           <select id="fResp" class="border rounded-lg px-2 py-2"><option value="">Responsable</option></select>
-          <!-- Selector de tipo de gráfico -->
-          <select id="chartType" class="border rounded-lg px-2 py-2">
-            <option value="bar-h">Barras horizontales</option>
-            <option value="doughnut">Dona</option>
-            <option value="pie">Torta</option>
-          </select>
         </div>
         <button id="btnReset" class="mt-2 text-sm underline text-gray-600">Limpiar filtros</button>
       </div>
@@ -125,9 +119,7 @@
       <div class="grid lg:grid-cols-2 gap-4">
         <div class="rounded-xl shadow bg-white p-4">
           <h3 class="font-semibold mb-2">% Avance por Indicador</h3>
-          <!-- Altura se ajusta por JS -->
           <canvas id="chartIndicadores"></canvas>
-          <p id="chartHint" class="text-xs text-gray-500 mt-2"></p>
         </div>
         <div class="rounded-xl shadow bg-white p-4">
           <h3 class="font-semibold mb-3">Tabla de Indicadores</h3>
@@ -349,7 +341,7 @@ function renderKPIs(){
   document.getElementById('kpiGris').textContent     = nGris;
 }
 
-/* ====== INDICADORES: tabla ====== */
+/* ====== INDICADORES: agregación + tabla ====== */
 function buildIndicadoresAggregated(){
   const rows = {};
   FILT.forEach(r=>{
@@ -379,52 +371,46 @@ function renderIndicadoresTable(arr){
   });
 }
 
-/* ====== INDICADORES: gráfico con opciones ====== */
-function autoHeightByCount(n, base=260, per=26, max=700){
-  return Math.min(base + Math.max(0, n-8)*per, max);
-}
-function renderIndicadoresChart(type, arr){
-  const labelsRaw = arr.map(x=> indicadorNumero(x.ind)); // ← solo número
-  const values = arr.map(x=>{
+/* ====== INDICADORES: gráfico (barras horizontales) ====== */
+function renderIndicadoresChart(arr){
+  const labels = arr.map(x => indicadorNumero(x.ind)); // sólo número (p. ej., 3.1)
+  const values = arr.map(x => {
     const avg = x.pcts.length ? (x.pcts.reduce((s,v)=>s+v,0)/x.pcts.length) : 0;
     return Math.round(avg*10)/10;
   });
 
   const canvas = document.getElementById('chartIndicadores');
-  const hint = document.getElementById('chartHint');
+  const ctx = canvas.getContext('2d');
+
+  // Altura fija y compacta para no alargar la página
+  canvas.height = 380;
 
   if (chartIndic) chartIndic.destroy();
-
-  // Ajustes por tipo
-  if (type === 'bar-h') {
-    canvas.height = autoHeightByCount(labelsRaw.length);
-    hint.textContent = "Vista recomendada para muchos indicadores. Etiquetas = número del indicador (p.ej., 3.1).";
-    chartIndic = new Chart(canvas.getContext('2d'), {
-      type:'bar',
-      data:{ labels: labelsRaw, datasets:[{ label:'% Cumplimiento', data: values }]},
-      options:{
-        responsive:true,
-        maintainAspectRatio:false,
-        indexAxis:'y',               // ← horizontal
-        plugins:{ legend:{display:true} },
-        scales:{ x:{ beginAtZero:true, max:100 } }
+  chartIndic = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: '% Cumplimiento', data: values }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',                // ← barras horizontales
+      plugins: {
+        legend: { display: true },
+        tooltip: {
+          callbacks: {
+            // El tooltip muestra el nombre completo del indicador
+            title: (items) => {
+              const i = items[0].dataIndex;
+              return arr[i]?.ind ?? '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { beginAtZero: true, max: 100 },
+        y: { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } }
       }
-    });
-  } else if (type === 'doughnut' || type === 'pie') {
-    // limitar a 12 para que sea legible en dona/torta
-    const cap = 12;
-    const L = labelsRaw.slice(0, cap);
-    const V = values.slice(0, cap);
-    canvas.height = 380;
-    hint.textContent = (labelsRaw.length>cap)
-      ? `Mostrando primeros ${cap} indicadores. Usa Barras horizontales para ver todos.`
-      : "Dona/Torta: mejor para ≤12 indicadores.";
-    chartIndic = new Chart(canvas.getContext('2d'), {
-      type: type,
-      data:{ labels: L, datasets:[{ label:'% Cumplimiento', data: V }]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'right'} } }
-    });
-  }
+    }
+  });
 }
 
 /* ====== ACTIVIDADES ====== */
@@ -579,13 +565,10 @@ function initTabs(){
 }
 
 /* ====== START ====== */
-let INDICADORES_CACHE = [];
 function renderIndicadores(){
   const arr = buildIndicadoresAggregated();
-  INDICADORES_CACHE = arr;
   renderIndicadoresTable(arr);
-  const type = document.getElementById('chartType').value || 'bar-h';
-  renderIndicadoresChart(type, arr);
+  renderIndicadoresChart(arr); // barras horizontales fijas
 }
 
 async function main(){
@@ -608,7 +591,7 @@ document.getElementById('btnReset').addEventListener('click', ()=>{
   ['fAnio','fComponente','fEstado','fMes','fResp'].forEach(id=> document.getElementById(id).value="");
   applyFilters(); renderKPIs(); renderIndicadores(); renderActividades(); renderCronograma(); renderComponentes();
 });
-['fAnio','fComponente','fEstado','fMes','fResp','chartType'].forEach(id=>{
+['fAnio','fComponente','fEstado','fMes','fResp'].forEach(id=>{
   document.getElementById(id).addEventListener('change', ()=>{
     applyFilters(); renderKPIs(); renderIndicadores(); renderActividades(); renderCronograma(); renderComponentes();
   });
