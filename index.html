@@ -11,19 +11,15 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{
-      --giz-green:#7FFF00;   /* Cumplida exitosamente */
-      --giz-red:#FF0000;     /* Atrasada/Interrumpida/En riesgo */
-      --giz-yellow:#FFFF00;  /* En proceso */
-      --giz-gray:#C0C0C0;    /* No puede iniciar o concluir satisfactoriamente */
-      --giz-blue:#4169E1;    /* Reprogramado */
+      --giz-green:#7FFF00; --giz-red:#FF0000; --giz-yellow:#FFFF00;
+      --giz-gray:#C0C0C0; --giz-blue:#4169E1;
       --ink:#111; --muted:#555; --border:#e5e7eb; --bg:#fff; --maxw:1200px;
     }
     *{box-sizing:border-box}
-    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji"; color:var(--ink); background:var(--bg); line-height:1.4; }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial; color:var(--ink); background:var(--bg); line-height:1.4; }
     header{ border-bottom:1px solid var(--border); background:#fff; }
     .wrap{ max-width:var(--maxw); margin:auto; padding:16px 20px; }
     .hdr{ display:flex; align-items:center; gap:16px; justify-content:space-between; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:14px; }
     .brand h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.2px; }
     .actions{ display:flex; gap:8px; flex-wrap:wrap; }
     button, select{ padding:10px 12px; border:1px solid var(--border); background:#fff; border-radius:10px; cursor:pointer; font-weight:600; }
@@ -32,7 +28,6 @@
     .muted{ color:var(--muted); font-size:14px }
     .row{ display:grid; grid-template-columns:1fr; gap:16px; }
     @media(min-width:980px){ .row-2{ grid-template-columns:1fr 1fr; } }
-
     .card{ border:1px solid var(--border); border-radius:14px; padding:16px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04); }
     .card h2{ margin:0 0 8px 0; font-size:18px; }
 
@@ -44,25 +39,26 @@
 
     #chartBox{ width:100%; height:420px }
 
-    table{ width:100%; border-collapse:collapse; }
-    th, td{ border-top:1px solid var(--border); padding:8px 10px; text-align:left; vertical-align:top; }
-    th{ background:#fafafa; }
-    .badge{ display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(0,0,0,.08); background:#fff; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th, td{ border-top:1px solid var(--border); padding:6px 8px; text-align:left; vertical-align:top; }
+    th{ background:#fafafa; font-size:13px; }
+    .badge{ display:inline-block; padding:3px 6px; border-radius:999px; font-size:12px; border:1px solid rgba(0,0,0,.08); background:#fff; }
     .b-green{ background:var(--giz-green); }
     .b-yellow{ background:var(--giz-yellow); }
     .b-red{ background:var(--giz-red); color:#fff; }
     .b-gray{ background:var(--giz-gray); }
     .b-blue{ background:var(--giz-blue); color:#fff; }
 
+    .pagination{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-top:8px; font-size:13px; }
+    .pagination button{ padding:6px 10px; border-radius:6px; font-weight:500; }
+
     footer#print-footer{ display:none; }
     @media print{
       @page{ size:A4 landscape; margin:14mm; }
       header .actions{ display:none !important; }
-      a{ text-decoration:none; color:inherit; }
-      footer#print-footer{
-        display:block; position:fixed; bottom:6mm; left:0; right:0; text-align:center; font-size:11px; color:#333;
-      }
+      footer#print-footer{ display:block; position:fixed; bottom:6mm; left:0; right:0; text-align:center; font-size:11px; color:#333; }
       .card{ break-inside:avoid; }
+      .pagination{ display:none; }
     }
   </style>
 </head>
@@ -72,13 +68,13 @@
       <div class="brand">
         <div>
           <h1>Sistema de Monitoreo – ProIgualdad</h1>
-          <div class="muted" id="subhead">Dashboard de indicadores por porcentaje de cumplimiento</div>
+          <div class="muted">Dashboard de indicadores por porcentaje de cumplimiento</div>
         </div>
       </div>
       <div class="actions">
         <button id="btnExportCSV">⬇️ CSV</button>
         <button id="btnExportXLSX">⬇️ XLSX</button>
-        <button id="btnPrint" title="Imprime o guarda como PDF">🖨️ Imprimir / PDF</button>
+        <button id="btnPrint">🖨️ Imprimir / PDF</button>
       </div>
     </div>
   </header>
@@ -89,21 +85,11 @@
       <div class="card">
         <h2>Filtros</h2>
         <div class="toolbar">
-          <label>Año:
-            <select id="fAnio"><option value="">Todos</option></select>
-          </label>
-          <label>Componente:
-            <select id="fComponente"><option value="">Todos</option></select>
-          </label>
-          <label>Estado:
-            <select id="fEstado"><option value="">Todos</option></select>
-          </label>
-          <label>Mes:
-            <select id="fMes"><option value="">Todos</option></select>
-          </label>
-          <label>Responsable:
-            <select id="fResp"><option value="">Todos</option></select>
-          </label>
+          <label>Año: <select id="fAnio"><option value="">Todos</option></select></label>
+          <label>Componente: <select id="fComponente"><option value="">Todos</option></select></label>
+          <label>Estado: <select id="fEstado"><option value="">Todos</option></select></label>
+          <label>Mes: <select id="fMes"><option value="">Todos</option></select></label>
+          <label>Responsable: <select id="fResp"><option value="">Todos</option></select></label>
           <button id="btnClear">Limpiar filtros</button>
         </div>
       </div>
@@ -126,41 +112,46 @@
         <div id="componentesGrid" class="row row-2"></div>
       </div>
 
-      <!-- Indicadores (gráfico) -->
+      <!-- Indicadores -->
       <div class="card">
         <h2>Indicadores (barras horizontales)</h2>
         <div class="muted">Etiquetas abreviadas (solo número del indicador). El tooltip muestra el nombre completo.</div>
-        <div id="chartBox">
-          <canvas id="chartIndicadores" aria-label="Gráfico de indicadores" role="img"></canvas>
-        </div>
+        <div id="chartBox"><canvas id="chartIndicadores"></canvas></div>
       </div>
 
       <!-- Actividades -->
       <div class="card">
         <h2>Actividades</h2>
-        <div class="muted">Tabla con columnas clave y estado con color.</div>
+        <div class="muted">Tabla con columnas clave, estado con color y paginación.</div>
         <div class="table-wrap">
           <table id="tblActividades">
             <thead>
               <tr>
-                <th>Año</th>
-                <th>Mes</th>
-                <th>Componente</th>
-                <th>Actividad principal</th>
-                <th>Subactividad</th>
-                <th>Tarea específica</th>
-                <th>Descripción</th>
-                <th>Responsable</th>
-                <th>%</th>
-                <th>Estado</th>
-                <th>Evidencia</th>
+                <th>Año</th><th>Mes</th><th>Componente</th><th>Actividad principal</th>
+                <th>Subactividad</th><th>Tarea específica</th><th>Descripción</th>
+                <th>Responsable</th><th>%</th><th>Estado</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
-      </div>
 
+        <!-- Paginación -->
+        <div class="pagination">
+          <div>
+            <label>Filas por página:
+              <select id="rowsPerPage">
+                <option>10</option><option>25</option><option>50</option>
+              </select>
+            </label>
+          </div>
+          <div id="pageInfo"></div>
+          <div>
+            <button id="prevPage">⬅️ Anterior</button>
+            <button id="nextPage">Siguiente ➡️</button>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -169,237 +160,194 @@
   </footer>
 
   <script>
-    /* ========= 1) SUPABASE ========= */
-    const SUPABASE_URL = "https://xrvxryozthadpzsgmbir.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhydnhyeW96dGhhZHB6c2dtYmlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODA5NjcsImV4cCI6MjA3NDU1Njk2N30.mVDnVaJCiJzSEFJ2ZlHGrtbFk-DZNb61aDcrNf3KsHg";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    /* ===== 1) SUPABASE ===== */
+    const SUPABASE_URL="https://xrvxryozthadpzsgmbir.supabase.co";
+    const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhydnhyeW96dGhhZHB6c2dtYmlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODA5NjcsImV4cCI6MjA3NDU1Njk2N30.mVDnVaJCiJzSEFJ2ZlHGrtbFk-DZNb61aDcrNf3KsHg";
+    const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-    /* ========= 2) UTIL ========= */
-    const MES_IDX = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
-    const MES_NOMS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    /* ===== 2) UTIL ===== */
+    const MES_IDX={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+    const MES_NOMS=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
     function getEstadoClass(estado=""){
-      const s = (estado||"").toLowerCase();
+      const s=(estado||"").toLowerCase();
       if (s.includes("reprogram")) return "b-blue";
       if (s.includes("cumplida")) return "b-green";
       if (s.includes("proceso")) return "b-yellow";
       if (s.includes("no puede")) return "b-gray";
-      if (s.includes("atras") || s.includes("interrump") || s.includes("riesg")) return "b-red";
+      if (s.match(/atras|interrump|riesg/)) return "b-red";
       return "";
     }
 
-    // Normaliza el "código" numérico del indicador (solo números y puntos)
-    // y corrige el caso especial 2 -> 2.1
+    // Código numérico del indicador; regla especial 2 -> 2.1
     function indicatorCode(ind){
       if(!ind) return "";
-      let s = String(ind).trim();
-      const m = s.match(/^(?:Indicador\s*)?(\d+(?:\.\d+)*)(?=[\s\.:/-]|$)/i);
-      let code = m && m[1] ? m[1] : s.replace(/[^\d.]/g,"").replace(/^\.+|\.+$/g,"");
-      if (code === "2") code = "2.1"; // regla solicitada
+      const s=String(ind).trim();
+      const m=s.match(/^(?:Indicador\s*)?(\d+(?:\.\d+)*)(?=[\s\.:/-]|$)/i);
+      let code=m&&m[1] ? m[1] : s.replace(/[^\d.]/g,"").replace(/^\.+|\.+$/g,"");
+      if (code==="2") code="2.1";
       return code || s.slice(0,6).toUpperCase();
     }
-
-    // Orden "natural" por código: 1 < 1.1 < 1.2 < 2 < 2.1 < 3.1.2 ...
+    // Orden natural 1 < 1.1 < 2 < 2.1 < 3.1.2 ...
     function compareCodes(a,b){
-      const pa = String(a).split(".").map(n=>parseInt(n,10));
-      const pb = String(b).split(".").map(n=>parseInt(n,10));
-      const len = Math.max(pa.length, pb.length);
-      for (let i=0;i<len;i++){
-        const va = pa[i] ?? 0, vb = pb[i] ?? 0;
-        if (va !== vb) return va - vb;
-      }
+      const pa=String(a).split(".").map(n=>parseInt(n,10));
+      const pb=String(b).split(".").map(n=>parseInt(n,10));
+      const len=Math.max(pa.length,pb.length);
+      for(let i=0;i<len;i++){ const va=pa[i]??0, vb=pb[i]??0; if(va!==vb) return va-vb; }
       return 0;
     }
-
-    function formatFechaBO(d = new Date()){
+    function formatFechaBO(d=new Date()){
       try{
-        return new Intl.DateTimeFormat("es-BO", {
-          timeZone:"America/La_Paz", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"
-        }).format(d);
+        return new Intl.DateTimeFormat("es-BO",{timeZone:"America/La_Paz",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
       }catch{ return d.toLocaleString(); }
     }
-
     function setChartHeightByCount(count){
-      const px = Math.max(260, Math.min(1600, (count * 26) + 120));
-      document.getElementById("chartBox").style.height = px + "px";
+      const px=Math.max(260, Math.min(1600, (count*26)+120));
+      document.getElementById("chartBox").style.height=px+"px";
     }
-
-    // CSV
+    // CSV/XLSX helpers
     function toCSV(rows){
-      if (!rows.length) return "";
-      const cols = Object.keys(rows[0]);
-      const esc = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
-      return cols.map(esc).join(",") + "\n" +
-             rows.map(r => cols.map(c => esc(r[c])).join(",")).join("\n");
+      if(!rows.length) return "";
+      const cols=Object.keys(rows[0]); const esc=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+      return cols.map(esc).join(",")+"\n"+rows.map(r=>cols.map(c=>esc(r[c])).join(",")).join("\n");
     }
     function downloadXLSX(rows, filename){
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "datos");
-      XLSX.writeFile(wb, filename);
+      const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "datos"); XLSX.writeFile(wb, filename);
     }
 
-    /* ========= 3) ESTADO ========= */
-    let RAW = [];
-    let FILTERED = [];
-    let CHART;
+    /* ===== 3) ESTADO ===== */
+    let RAW=[], FILTERED=[], CHART;
+    let currentPage=1, rowsPerPage=10;
 
     // Filtros DOM
-    const fAnio = document.getElementById("fAnio");
-    const fComponente = document.getElementById("fComponente");
-    const fEstado = document.getElementById("fEstado");
-    const fMes = document.getElementById("fMes");
-    const fResp = document.getElementById("fResp");
+    const fAnio=document.getElementById("fAnio");
+    const fComponente=document.getElementById("fComponente");
+    const fEstado=document.getElementById("fEstado");
+    const fMes=document.getElementById("fMes");
+    const fResp=document.getElementById("fResp");
 
-    /* ========= 4) CARGA ========= */
+    const rowsSelect=document.getElementById("rowsPerPage");
+    const pageInfo=document.getElementById("pageInfo");
+
+    /* ===== 4) CARGA ===== */
     async function loadData(){
       const { data, error } = await supabaseClient
         .from("entradas_form")
-        .select("anio_gestion, mes, componente, objetivo, indicador, actividad_principal, subactividad, tarea_especifica, descripcion, responsable, meta, porcentaje_cumplimiento, estado, evidencia_url");
-
-      if (error){
-        console.error(error);
-        alert("Error al cargar datos desde Supabase. Revisa credenciales o permisos.");
-        return [];
-      }
-      RAW = (data||[]).map(r => {
-        const mesStr = String(r.mes || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
-        const mIdx = MES_IDX[mesStr] || null;
-        return {...r, _mes_idx:mIdx, _mes_abbr: mIdx ? MES_NOMS[mIdx-1] : ""};
+        .select("anio_gestion, mes, componente, objetivo, indicador, actividad_principal, subactividad, tarea_especifica, descripcion, responsable, meta, porcentaje_cumplimiento, estado");
+      if(error){ console.error(error); alert("Error al cargar datos desde Supabase."); return; }
+      RAW=(data||[]).map(r=>{
+        const ms=String(r.mes||"").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
+        const idx=MES_IDX[ms]||null;
+        return {...r, _mes_idx:idx, _mes_abbr: idx ? MES_NOMS[idx-1] : ""};
       });
-      return RAW;
     }
 
-    /* ========= 5) FILTROS ========= */
+    /* ===== 5) FILTROS ===== */
     function fillFilterOptions(){
-      const uniq = arr => [...new Set(arr.filter(v=>v!=null && v!==""))];
-      const setOpts = (sel, values) => {
-        const cur = sel.value;
-        sel.innerHTML = `<option value="">Todos</option>` + values.map(v=>`<option>${v}</option>`).join("");
-        if ([...sel.options].some(o=>o.value===cur)) sel.value = cur;
-      };
-      setOpts(fAnio, uniq(RAW.map(r=>r.anio_gestion)).sort());
-      setOpts(fComponente, uniq(RAW.map(r=>r.componente)).sort());
-      setOpts(fEstado, uniq(RAW.map(r=>r.estado)).sort());
-      setOpts(fMes, uniq(RAW.map(r=>r._mes_abbr)).filter(Boolean).sort((a,b)=>MES_NOMS.indexOf(a)-MES_NOMS.indexOf(b)));
-      setOpts(fResp, uniq(RAW.map(r=>r.responsable)).sort());
+      const uniq=a=>[...new Set(a.filter(v=>v!=null && v!==""))];
+      const set=(sel,vals)=>{ sel.innerHTML=`<option value="">Todos</option>`+vals.map(v=>`<option>${v}</option>`).join(""); };
+      set(fAnio, uniq(RAW.map(r=>r.anio_gestion)).sort());
+      set(fComponente, uniq(RAW.map(r=>r.componente)).sort());
+      set(fEstado, uniq(RAW.map(r=>r.estado)).sort());
+      set(fMes, uniq(RAW.map(r=>r._mes_abbr)).sort((a,b)=>MES_NOMS.indexOf(a)-MES_NOMS.indexOf(b)));
+      set(fResp, uniq(RAW.map(r=>r.responsable)).sort());
     }
     function applyFilters(){
-      FILTERED = RAW.filter(r=>{
-        if (fAnio.value && String(r.anio_gestion) !== String(fAnio.value)) return false;
-        if (fComponente.value && r.componente !== fComponente.value) return false;
-        if (fEstado.value && r.estado !== fEstado.value) return false;
-        if (fMes.value && r._mes_abbr !== fMes.value) return false;
-        if (fResp.value && r.responsable !== fResp.value) return false;
+      FILTERED=RAW.filter(r=>{
+        if (fAnio.value && r.anio_gestion!=fAnio.value) return false;
+        if (fComponente.value && r.componente!=fComponente.value) return false;
+        if (fEstado.value && r.estado!=fEstado.value) return false;
+        if (fMes.value && r._mes_abbr!=fMes.value) return false;
+        if (fResp.value && r.responsable!=fResp.value) return false;
         return true;
       });
+      // al cambiar filtros, volvemos a la primera página
+      currentPage=1;
     }
 
-    /* ========= 6) KPIs ========= */
+    /* ===== 6) KPIs ===== */
     function renderKPIs(){
-      const cnt = {green:0,yellow:0,red:0,gray:0,blue:0};
-      for (const r of FILTERED){
-        const cls = getEstadoClass(r.estado);
-        if (cls==="b-green") cnt.green++;
-        else if (cls==="b-yellow") cnt.yellow++;
-        else if (cls==="b-gray") cnt.gray++;
-        else if (cls==="b-blue") cnt.blue++;
-        else cnt.red++;
+      const c={green:0,yellow:0,red:0,gray:0,blue:0};
+      for(const r of FILTERED){
+        const cls=getEstadoClass(r.estado);
+        if(cls==="b-green") c.green++;
+        else if(cls==="b-yellow") c.yellow++;
+        else if(cls==="b-gray") c.gray++;
+        else if(cls==="b-blue") c.blue++;
+        else c.red++;
       }
-      document.getElementById("kGreen").textContent = cnt.green;
-      document.getElementById("kYellow").textContent = cnt.yellow;
-      document.getElementById("kRed").textContent   = cnt.red;
-      document.getElementById("kGray").textContent  = cnt.gray;
-      document.getElementById("kBlue").textContent  = cnt.blue;
+      kGreen.textContent=c.green; kYellow.textContent=c.yellow; kRed.textContent=c.red; kGray.textContent=c.gray; kBlue.textContent=c.blue;
     }
 
-    /* ========= 7) COMPONENTES ========= */
+    /* ===== 7) COMPONENTES ===== */
     function renderComponentes(){
-      const tgt = document.getElementById("componentesGrid");
-      tgt.innerHTML = "";
-      const agg = new Map();
-      for (const r of FILTERED){
-        const k = r.componente || "(Sin componente)";
-        const v = Number(r.porcentaje_cumplimiento)||0;
-        if (!agg.has(k)) agg.set(k, {sum:0,n:0});
-        const o = agg.get(k); o.sum+=v; o.n++;
+      const tgt=document.getElementById("componentesGrid"); tgt.innerHTML="";
+      const agg=new Map();
+      for(const r of FILTERED){
+        const k=r.componente||"(Sin componente)";
+        const v=Number(r.porcentaje_cumplimiento)||0;
+        if(!agg.has(k)) agg.set(k,{s:0,n:0});
+        const o=agg.get(k); o.s+=v; o.n++;
       }
-      const rows = Array.from(agg.entries()).map(([componente,{sum,n}])=>({
-        componente, promedio: n? (sum/n) : 0, items:n
-      })).sort((a,b)=> a.componente.localeCompare(b.componente));
-
-      for (const r of rows){
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
+      const rows=[...agg.entries()].map(([k,{s,n}])=>({k, prom:n? s/n : 0, n})).sort((a,b)=>a.k.localeCompare(b.k));
+      for(const r of rows){
+        const card=document.createElement("div");
+        card.className="card";
+        card.innerHTML=`
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-            <div>
-              <div class="muted">Componente</div>
-              <div style="font-weight:700">${r.componente}</div>
-            </div>
-            <div style="text-align:right">
-              <div class="muted">Promedio</div>
-              <div style="font-size:24px;font-weight:800">${r.promedio.toFixed(1)}%</div>
-              <div class="muted">${r.items} registros</div>
-            </div>
+            <div><div class="muted">Componente</div><div style="font-weight:700">${r.k}</div></div>
+            <div style="text-align:right"><div class="muted">Promedio</div><div style="font-size:22px;font-weight:800">${r.prom.toFixed(1)}%</div><div class="muted">${r.n} registros</div></div>
           </div>
-          <div style="margin-top:10px;height:10px;background:#eee;border-radius:999px;overflow:hidden;">
-            <div style="height:10px;width:${Math.min(100,Math.max(0,r.promedio)).toFixed(1)}%;background:rgba(65,105,225,.9)"></div>
-          </div>
-        `;
+          <div style="margin-top:8px;height:8px;background:#eee;border-radius:999px;overflow:hidden;">
+            <div style="height:8px;width:${Math.min(100,Math.max(0,r.prom)).toFixed(1)}%;background:rgba(65,105,225,.9)"></div>
+          </div>`;
         tgt.appendChild(card);
       }
     }
 
-    /* ========= 8) GRÁFICO ========= */
+    /* ===== 8) GRÁFICO ===== */
     function renderChart(){
-      // 1) Agrupa por indicador completo → promedio
-      const aggFull = new Map();
-      for (const r of FILTERED){
-        const indFull = r.indicador || "Sin indicador";
-        const v = Number(r.porcentaje_cumplimiento) || 0;
-        if (!aggFull.has(indFull)) aggFull.set(indFull, {sum:0,n:0});
-        const o = aggFull.get(indFull); o.sum+=v; o.n++;
+      // Agrupa por indicador COMPLETO → promedio
+      const byFull=new Map();
+      for(const r of FILTERED){
+        const full=r.indicador||"";
+        const v=Number(r.porcentaje_cumplimiento)||0;
+        if(!byFull.has(full)) byFull.set(full,{s:0,n:0});
+        const o=byFull.get(full); o.s+=v; o.n++;
       }
-      const rowsFull = Array.from(aggFull.entries()).map(([indicador,{sum,n}])=>{
-        const code = indicatorCode(indicador);
-        return { indicador, code, promedio: n? (sum/n) : 0 };
-      });
-
-      // 2) Consolida por "code": si hay duplicados (ej. 3.1), deja el de mayor promedio
-      const byCode = new Map();
-      for (const r of rowsFull){
-        const prev = byCode.get(r.code);
-        if (!prev || r.promedio > prev.promedio) byCode.set(r.code, r);
+      // Mapea a code y consolida por code (si hay duplicados deja el mayor promedio)
+      const byCode=new Map();
+      for(const [full,{s,n}] of byFull.entries()){
+        const code=indicatorCode(full);
+        const prom=n ? s/n : 0;
+        const prev=byCode.get(code);
+        if(!prev || prom>prev.prom) byCode.set(code,{code,full,prom});
       }
-      const rows = Array.from(byCode.values()).sort((a,b)=> compareCodes(a.code, b.code));
+      const rows=[...byCode.values()].sort((a,b)=>compareCodes(a.code,b.code));
 
-      // 3) Pinta
-      const labelsShort = rows.map(r => r.code);
-      const labelsFull  = rows.map(r => r.indicador);
-      const values      = rows.map(r => Number(r.promedio.toFixed(1)));
+      const labelsShort=rows.map(r=>r.code);
+      const labelsFull=rows.map(r=>r.full);
+      const values=rows.map(r=>Number(r.prom.toFixed(1)));
 
       setChartHeightByCount(labelsShort.length);
-
-      if (CHART) CHART.destroy();
-      const ctx = document.getElementById("chartIndicadores").getContext("2d");
-      CHART = new Chart(ctx, {
+      if(CHART) CHART.destroy();
+      const ctx=document.getElementById("chartIndicadores").getContext("2d");
+      CHART=new Chart(ctx,{
         type:"bar",
         data:{ labels:labelsShort, datasets:[{
           label:"% promedio de cumplimiento",
           data:values,
           backgroundColor:"rgba(65,105,225,0.65)",
           borderColor:"rgba(65,105,225,1)",
-          borderWidth:1.2,
-          borderSkipped:false,
-          barThickness:"flex"
+          borderWidth:1.2, borderSkipped:false, barThickness:"flex"
         }]},
         options:{
           responsive:true, maintainAspectRatio:false, indexAxis:"y",
           scales:{
             x:{ min:0, max:100, grid:{color:"rgba(0,0,0,0.06)"},
-                ticks:{ callback:v=>v+" %", font:{size:12}},
-                title:{display:true, text:"Porcentaje de cumplimiento (%)"} },
+                ticks:{ callback:v=>v+" %", font:{size:12} },
+                title:{ display:true, text:"Porcentaje de cumplimiento (%)" } },
             y:{ grid:{display:false}, ticks:{autoSkip:false, font:{size:12}} }
           },
           plugins:{
@@ -413,16 +361,18 @@
       });
     }
 
-    /* ========= 9) ACTIVIDADES ========= */
+    /* ===== 9) ACTIVIDADES + PAGINACIÓN ===== */
     function renderActividades(){
-      const tb = document.querySelector("#tblActividades tbody");
-      tb.innerHTML = "";
-      for (const r of FILTERED){
-        const cls = getEstadoClass(r.estado);
-        const badge = `<span class="badge ${cls}">${r.estado || ""}</span>`;
-        const ev = r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank">Abrir</a>` : "";
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
+      const tb=document.querySelector("#tblActividades tbody");
+      tb.innerHTML="";
+      const total=FILTERED.length;
+      const start=(currentPage-1)*rowsPerPage;
+      const end=Math.min(start+rowsPerPage, total);
+      const pageData=FILTERED.slice(start,end);
+
+      for(const r of pageData){
+        const tr=document.createElement("tr");
+        tr.innerHTML=`
           <td>${r.anio_gestion ?? ""}</td>
           <td>${r._mes_abbr ?? ""}</td>
           <td>${r.componente ?? ""}</td>
@@ -432,45 +382,38 @@
           <td>${r.descripcion ?? ""}</td>
           <td>${r.responsable ?? ""}</td>
           <td>${r.porcentaje_cumplimiento ?? ""}</td>
-          <td>${badge}</td>
-          <td>${ev}</td>
-        `;
+          <td><span class="badge ${getEstadoClass(r.estado)}">${r.estado || ""}</span></td>`;
         tb.appendChild(tr);
       }
+
+      // Info + botones
+      pageInfo.textContent = total ? `Mostrando ${start+1}–${end} de ${total} actividades` : "Sin registros";
+      document.getElementById("prevPage").disabled = currentPage===1;
+      document.getElementById("nextPage").disabled = end>=total;
+    }
+    function goPage(delta){
+      currentPage = Math.max(1, currentPage + delta);
+      renderActividades();
     }
 
-    /* ========= 10) EXPORTAR ========= */
+    /* ===== 10) EXPORTAR ===== */
     function getFilteredForExport(){
       return FILTERED.map(r=>({
-        anio_gestion: r.anio_gestion,
-        mes: r._mes_abbr || r.mes,
-        componente: r.componente,
-        objetivo: r.objetivo,
-        indicador: r.indicador,
-        actividad_principal: r.actividad_principal,
-        subactividad: r.subactividad,
-        tarea_especifica: r.tarea_especifica,
-        descripcion: r.descripcion,
-        responsable: r.responsable,
-        meta: r.meta,
-        porcentaje_cumplimiento: r.porcentaje_cumplimiento,
-        estado: r.estado,
-        evidencia_url: r.evidencia_url
+        anio_gestion:r.anio_gestion, mes:r._mes_abbr || r.mes, componente:r.componente,
+        objetivo:r.objetivo, indicador:r.indicador, actividad_principal:r.actividad_principal,
+        subactividad:r.subactividad, tarea_especifica:r.tarea_especifica, descripcion:r.descripcion,
+        responsable:r.responsable, meta:r.meta, porcentaje_cumplimiento:r.porcentaje_cumplimiento,
+        estado:r.estado
       }));
     }
     function exportCSV(){
-      const csv = toCSV(getFilteredForExport());
-      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "proigualdad_export.csv";
-      a.click(); URL.revokeObjectURL(a.href);
+      const csv=toCSV(getFilteredForExport());
+      const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="proigualdad_export.csv"; a.click(); URL.revokeObjectURL(a.href);
     }
-    function exportXLSX(){
-      downloadXLSX(getFilteredForExport(), "proigualdad_export.xlsx");
-    }
+    function exportXLSX(){ downloadXLSX(getFilteredForExport(), "proigualdad_export.xlsx"); }
 
-    /* ========= 11) RENDER GENERAL ========= */
+    /* ===== 11) RENDER GENERAL ===== */
     function renderAll(){
       applyFilters();
       renderKPIs();
@@ -479,23 +422,24 @@
       renderActividades();
     }
 
-    /* ========= 12) INIT ========= */
-    async function init(){
-      await loadData();
-      fillFilterOptions();
-      renderAll();
-    }
+    /* ===== 12) INIT + EVENTOS ===== */
+    async function init(){ await loadData(); fillFilterOptions(); renderAll(); }
+    init();
 
-    // Eventos
-    [fAnio,fComponente,fEstado,fMes,fResp].forEach(sel=> sel.addEventListener("change", renderAll));
-    document.getElementById("btnClear").addEventListener("click", ()=>{
-      [fAnio,fComponente,fEstado,fMes,fResp].forEach(s=> s.value="");
-      renderAll();
-    });
+    // Filtros
+    [fAnio,fComponente,fEstado,fMes,fResp].forEach(sel => sel.addEventListener("change", renderAll));
+    document.getElementById("btnClear").addEventListener("click", ()=>{ [fAnio,fComponente,fEstado,fMes,fResp].forEach(s=>s.value=""); renderAll(); });
+
+    // Exportar
     document.getElementById("btnExportCSV").addEventListener("click", exportCSV);
     document.getElementById("btnExportXLSX").addEventListener("click", exportXLSX);
 
-    // Imprimir / PDF con fecha
+    // Paginación
+    rowsSelect.addEventListener("change", ()=>{ rowsPerPage=+rowsSelect.value; currentPage=1; renderActividades(); });
+    document.getElementById("prevPage").addEventListener("click", ()=> goPage(-1));
+    document.getElementById("nextPage").addEventListener("click", ()=> goPage(1));
+
+    // Imprimir / PDF
     document.getElementById("btnPrint").addEventListener("click", ()=>{
       document.getElementById("genDate").textContent = formatFechaBO(new Date());
       window.print();
@@ -503,8 +447,6 @@
     window.addEventListener("beforeprint", ()=>{
       document.getElementById("genDate").textContent = formatFechaBO(new Date());
     });
-
-    init();
   </script>
 </body>
 </html>
