@@ -25,14 +25,11 @@
       .print-break{ page-break-before:always; }
       @page { size: A4 landscape; margin: 12mm; }
 
-      /* Colores reales en PDF (badges) */
       html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-      /* No recortar tablas y hacerlas legibles */
       .table-wrap{ overflow: visible !important; }
       table{ width: 100% !important; table-layout: auto !important; font-size: 11px !important; }
       th, td{ padding: 4px 6px !important; word-wrap: break-word; }
-      /* Cards y contenedores más compactos */
       .rounded-xl{ box-shadow: none !important; }
     }
   </style>
@@ -122,7 +119,8 @@
       <div class="grid lg:grid-cols-2 gap-4">
         <div class="rounded-xl shadow bg-white p-4">
           <h3 class="font-semibold mb-2">% Avance por Indicador</h3>
-          <canvas id="chartIndicadores" height="220"></canvas>
+          <!-- altura flexible; la ajustamos por JS para que quepan las etiquetas -->
+          <canvas id="chartIndicadores"></canvas>
         </div>
         <div class="rounded-xl shadow bg-white p-4">
           <h3 class="font-semibold mb-3">Tabla de Indicadores</h3>
@@ -252,7 +250,6 @@ function badgeEstado(raw){
   if (isReprog)      return '<span class="badge" style="background:#4169E1;color:#fff">Reprogramado</span>';
   return `<span class="badge bg-gray-200 text-gray-800">${raw||"—"}</span>`;
 }
-
 function uniqueSorted(arr){
   return [...new Set(arr.filter(Boolean))].sort((a,b)=>{
     const na=Number(a), nb=Number(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb;
@@ -339,7 +336,28 @@ function renderKPIs(){
   document.getElementById('kpiGris').textContent     = nGris;
 }
 
-/* ====== INDICADORES ====== */
+/* ====== INDICADORES (barras con etiquetas multilinea debajo) ====== */
+function splitLabelToLines(str, max=28){
+  const words = String(str||"").split(/\s+/);
+  const lines = [];
+  let line = "";
+  words.forEach(w=>{
+    if((line + " " + w).trim().length > max){
+      if(line) lines.push(line.trim());
+      line = w;
+    } else {
+      line = (line ? line + " " : "") + w;
+    }
+  });
+  if(line) lines.push(line.trim());
+  return lines;
+}
+function autoChartHeightByLabels(labels){
+  // más etiquetas => más alto, pero con tope razonable
+  const base = 280;                 // base mínima
+  const extra = Math.max(0, labels.length - 6) * 28; // 28px por etiqueta extra sobre 6
+  return Math.min(base + extra, 640); // tope 640px
+}
 function renderIndicadores(){
   const tb=document.getElementById('tblIndicadores'); tb.innerHTML='';
   const rows = {};
@@ -367,18 +385,37 @@ function renderIndicadores(){
     `);
   });
 
-  const labels = arr.map(x=> `${x.anio??""} · ${x.ind??""}`);
+  const labelsRaw = arr.map(x=> `${x.anio??""} · ${x.ind??""}`);
+  const labelsWrapped = labelsRaw.map(l => splitLabelToLines(l, 36)); // multilínea debajo
   const values = arr.map(x=> {
     const avg = x.pcts.length ? (x.pcts.reduce((s,v)=>s+v,0)/x.pcts.length) : 0;
     return Math.round(avg*10)/10;
   });
 
-  const ctx = document.getElementById('chartIndicadores').getContext('2d');
+  const canvas = document.getElementById('chartIndicadores');
+  const h = autoChartHeightByLabels(labelsRaw);
+  canvas.height = h;
+
   if (chartIndic) chartIndic.destroy();
-  chartIndic = new Chart(ctx, {
+  chartIndic = new Chart(canvas.getContext('2d'), {
     type:'bar',
-    data:{ labels, datasets:[{ label:'% Cumplimiento', data: values }]},
-    options:{ responsive:true, plugins:{ legend:{display:true}}, scales:{ y:{ beginAtZero:true, max:100 } } }
+    data:{ labels: labelsWrapped, datasets:[{ label:'% Cumplimiento', data: values }]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{display:true}, tooltip:{ callbacks:{ title:(ctx)=>labelsRaw[ctx[0].dataIndex] } } },
+      scales:{
+        x:{
+          ticks:{
+            autoSkip:false,
+            maxRotation:0,
+            minRotation:0,
+            padding:8
+          }
+        },
+        y:{ beginAtZero:true, max:100 }
+      }
+    }
   });
 }
 
@@ -482,9 +519,7 @@ function exportCSV(){
   const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='proigualdad_export.csv'; a.click(); URL.revokeObjectURL(url);
 }
-
 function exportXLSX(){
-  // Armamos hoja con los datos filtrados y las columnas visibles en el dashboard
   const rows = FILT.map(r=>({
     "Año": r.anio_gestion ?? "",
     "Mes": r.mes ?? "",
@@ -506,7 +541,6 @@ function exportXLSX(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "ProIgualdad");
 
-  // Ajuste básico de ancho de columnas
   const headers = Object.keys(rows[0] || {
     "Año":"", "Mes":"", "Componente":"", "Objetivo":"", "Indicador":"", "Actividad Principal":"", "Subactividad":"", "Tarea específica":"", "Descripción":"", "Responsable":"", "Meta":"", "% Cumplimiento":"", "Estado":"", "Evidencia URL":""
   });
