@@ -10,11 +10,31 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SheetJS (Excel) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
-    @media print { .no-print{display:none!important} .print-break{page-break-before:always} }
-    .table-wrap{overflow:auto}
-    .badge{padding:.2rem .6rem;border-radius:9999px;font-size:.75rem;font-weight:700;display:inline-block}
-    .kpi-card{border:1px solid #eee}
+    /* ====== Pantalla ====== */
+    .table-wrap{ overflow:auto; }
+    .badge{ padding:.2rem .6rem; border-radius:9999px; font-size:.75rem; font-weight:700; display:inline-block }
+    .kpi-card{ border:1px solid #eee }
+
+    /* ====== Impresión / PDF ====== */
+    @media print {
+      .no-print{ display:none !important; }
+      .print-break{ page-break-before:always; }
+      @page { size: A4 landscape; margin: 12mm; }
+
+      /* Colores reales en PDF (badges) */
+      html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      /* No recortar tablas y hacerlas legibles */
+      .table-wrap{ overflow: visible !important; }
+      table{ width: 100% !important; table-layout: auto !important; font-size: 11px !important; }
+      th, td{ padding: 4px 6px !important; word-wrap: break-word; }
+      /* Cards y contenedores más compactos */
+      .rounded-xl{ box-shadow: none !important; }
+    }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -41,7 +61,8 @@
         <h2 class="font-semibold mb-3">Controles</h2>
         <div class="flex flex-wrap gap-2">
           <button id="btnReload" class="px-3 py-2 rounded-lg bg-black text-white hover:bg-gray-800">Recargar</button>
-          <button id="btnExport" class="px-3 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600">Exportar CSV</button>
+          <button id="btnExportXLSX" class="px-3 py-2 rounded-lg bg-green-700 text-white hover:bg-green-600">Exportar Excel</button>
+          <button id="btnExportCSV" class="px-3 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600">Exportar CSV</button>
           <button id="btnPrint"  class="px-3 py-2 rounded-lg bg-orange-600 text-white hover:opacity-90">Imprimir / PDF</button>
         </div>
       </div>
@@ -218,8 +239,6 @@ const fmtPct = (v)=> (v==null||v==="") ? "" : (Math.round(parseFloat(v)*10)/10) 
 /* Badges exactos GIZ por estado */
 function badgeEstado(raw){
   const e = String(raw||"").toLowerCase();
-
-  // matches amplios por si vienen variaciones
   const isCumplida = /cumplid|exitos/i.test(e) || e === "cumplida exitosamente";
   const isRojo = /atras|interrump|riesgo/i.test(e) || e === "atrasada, interrumpida o en riesgo";
   const isProceso = /proceso/i.test(e) || e === "en proceso";
@@ -231,7 +250,6 @@ function badgeEstado(raw){
   if (isProceso)     return '<span class="badge" style="background:#FFFF00;color:#000">En proceso</span>';
   if (isGris)        return '<span class="badge" style="background:#C0C0C0;color:#000">No puede iniciar/concluir</span>';
   if (isReprog)      return '<span class="badge" style="background:#4169E1;color:#fff">Reprogramado</span>';
-  // por defecto
   return `<span class="badge bg-gray-200 text-gray-800">${raw||"—"}</span>`;
 }
 
@@ -324,7 +342,6 @@ function renderKPIs(){
 /* ====== INDICADORES ====== */
 function renderIndicadores(){
   const tb=document.getElementById('tblIndicadores'); tb.innerHTML='';
-  // agrupar por indicador + año
   const rows = {};
   FILT.forEach(r=>{
     if(!r.indicador) return;
@@ -332,7 +349,7 @@ function renderIndicadores(){
     const pct = (r.porcentaje_cumplimiento==null||r.porcentaje_cumplimiento==="") ? null : parseFloat(r.porcentaje_cumplimiento);
     if(!rows[key]) rows[key] = {anio:r.anio_gestion, ind:r.indicador, meta:r.meta, pcts:[], est:r.estado||""};
     if(pct!=null && !isNaN(pct)) rows[key].pcts.push(pct);
-    if (r.meta!=null) rows[key].meta = r.meta; // último valor
+    if (r.meta!=null) rows[key].meta = r.meta;
     if (r.estado) rows[key].est = r.estado;
   });
   const arr = Object.values(rows).sort((a,b)=> (a.anio-b.anio) || String(a.ind).localeCompare(String(b.ind)));
@@ -457,13 +474,45 @@ function renderComponentes(){
   });
 }
 
-/* ====== EXPORT ====== */
+/* ====== EXPORT: CSV & EXCEL ====== */
 function exportCSV(){
   const cols=['anio_gestion','mes','componente','objetivo','indicador','actividad_principal','subactividad','tarea_especifica','descripcion','responsable','meta','porcentaje_cumplimiento','estado','evidencia_url'];
   const esc = v => { const s=(v==null)?"":String(v); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
   const lines=[cols.join(',')].concat(FILT.map(r=> cols.map(c=>esc(r[c])).join(',')));
   const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='proigualdad_export.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+function exportXLSX(){
+  // Armamos hoja con los datos filtrados y las columnas visibles en el dashboard
+  const rows = FILT.map(r=>({
+    "Año": r.anio_gestion ?? "",
+    "Mes": r.mes ?? "",
+    "Componente": r.componente ?? "",
+    "Objetivo": r.objetivo ?? "",
+    "Indicador": r.indicador ?? "",
+    "Actividad Principal": r.actividad_principal ?? "",
+    "Subactividad": r.subactividad ?? "",
+    "Tarea específica": r.tarea_especifica ?? "",
+    "Descripción": r.descripcion ?? "",
+    "Responsable": r.responsable ?? "",
+    "Meta": r.meta ?? "",
+    "% Cumplimiento": r.porcentaje_cumplimiento ?? "",
+    "Estado": r.estado ?? "",
+    "Evidencia URL": r.evidencia_url ?? ""
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows, { cellDates:false });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "ProIgualdad");
+
+  // Ajuste básico de ancho de columnas
+  const headers = Object.keys(rows[0] || {
+    "Año":"", "Mes":"", "Componente":"", "Objetivo":"", "Indicador":"", "Actividad Principal":"", "Subactividad":"", "Tarea específica":"", "Descripción":"", "Responsable":"", "Meta":"", "% Cumplimiento":"", "Estado":"", "Evidencia URL":""
+  });
+  ws['!cols'] = headers.map(h=>({ wch: Math.max(12, String(h).length + 2) }));
+
+  XLSX.writeFile(wb, "proigualdad_export.xlsx");
 }
 
 /* ====== TABS ====== */
@@ -501,7 +550,8 @@ async function main(){
 }
 
 document.getElementById('btnReload').addEventListener('click', main);
-document.getElementById('btnExport').addEventListener('click', exportCSV);
+document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+document.getElementById('btnExportXLSX').addEventListener('click', exportXLSX);
 document.getElementById('btnPrint').addEventListener('click', ()=>window.print());
 document.getElementById('btnReset').addEventListener('click', ()=>{
   ['fAnio','fComponente','fEstado','fMes','fResp'].forEach(id=> document.getElementById(id).value="");
