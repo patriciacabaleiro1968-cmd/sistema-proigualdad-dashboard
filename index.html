@@ -43,4 +43,164 @@
           <select id="fAnio" class="border rounded-lg px-2 py-1"><option value="">Año</option></select>
           <select id="fComponente" class="border rounded-lg px-2 py-1"><option value="">Componente</option></select>
           <select id="fEstado" class="border rounded-lg px-2 py-1"><option value="">Estado</option></select>
-          <select id="fMes"
+          <select id="fMes" class="border rounded-lg px-2 py-1"><option value="">Mes</option></select>
+          <select id="fResp" class="border rounded-lg px-2 py-1 col-span-2"><option value="">Responsable</option></select>
+        </div>
+        <div class="mt-2">
+          <button id="btnReset" class="text-sm underline text-gray-600">Limpiar filtros</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-4">
+    <div class="no-print bg-white rounded-xl p-2 shadow flex gap-2 flex-wrap">
+      <button data-tab="indicadores" class="tabbtn px-3 py-2 rounded-lg bg-black text-white">Indicadores</button>
+      <button data-tab="actividades" class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Actividades</button>
+      <button data-tab="cronograma"  class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Cronograma</button>
+      <button data-tab="componentes" class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Componentes</button>
+    </div>
+  </section>
+
+  <section id="tab-indicadores" class="tab">
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl p-4 shadow">
+        <h3 class="font-semibold mb-2">% Avance por Indicador</h3>
+        <canvas id="chartIndicadores" height="220"></canvas>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow">
+        <h3 class="font-semibold mb-3">Tabla de Indicadores</h3>
+        <div class="table-wrap">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left border-b">
+                <th class="py-2 pr-3">Año</th>
+                <th class="py-2 pr-3">Indicador</th>
+                <th class="py-2 pr-3">Meta</th>
+                <th class="py-2 pr-3">% Cumpl.</th>
+                <th class="py-2 pr-3">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tblIndicadores"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-actividades" class="tab hidden print-break">
+    <div class="bg-white rounded-xl p-4 shadow">
+      <h3 class="font-semibold mb-3">Actividades</h3>
+      <div class="table-wrap">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left border-b">
+              <th class="py-2 pr-3">Año</th>
+              <th class="py-2 pr-3">Componente</th>
+              <th class="py-2 pr-3">Actividad Principal</th>
+              <th class="py-2 pr-3">Subactividad</th>
+              <th class="py-2 pr-3">Tarea</th>
+              <th class="py-2 pr-3">Mes</th>
+              <th class="py-2 pr-3">Responsable</th>
+              <th class="py-2 pr-3">Estado</th>
+              <th class="py-2 pr-3">Evidencia</th>
+            </tr>
+          </thead>
+          <tbody id="tblActividades"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-cronograma" class="tab hidden print-break">
+    <div class="bg-white rounded-xl p-4 shadow">
+      <h3 class="font-semibold mb-3">Cronograma</h3>
+      <div class="table-wrap">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left border-b">
+              <th class="py-2 pr-3">Actividad Principal</th>
+              <th class="py-2 pr-3">Año</th>
+              <th class="py-2 pr-3">Componente</th>
+              ${["E","F","M","A","M","J","J","A","S","O","N","D"].map(m=>`<th class="py-2 px-2">${m}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody id="tblCronograma"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-componentes" class="tab hidden print-break">
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl p-4 shadow">
+        <h3 class="font-semibold mb-2">Promedio de % por Componente</h3>
+        <canvas id="chartComponentes" height="220"></canvas>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow">
+        <h3 class="font-semibold mb-3">Tabla de Componentes</h3>
+        <div class="table-wrap">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left border-b">
+                <th class="py-2 pr-3">Componente</th>
+                <th class="py-2 pr-3">Indicadores</th>
+                <th class="py-2 pr-3">Prom. %</th>
+              </tr>
+            </thead>
+            <tbody id="tblComponentes"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="mx-auto max-w-7xl px-4 py-6 text-xs text-gray-500">
+  ProIgualdad · GIZ Bolivia · Dashboard en GitHub Pages + Supabase
+</footer>
+
+<script>
+const SUPABASE_URL="https://xrvxryozthadpzsgmbir.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhydnhyeW96dGhhZHB6c2dtYmlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODA5NjcsImV4cCI6MjA3NDU1Njk2N30.mVDnVaJCiJzSEFJ2ZlHGrtbFk-DZNb61aDcrNf3KsHg";
+const TABLE_NAME="entradas_form";
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+function badgeEstado(e){e=String(e||"").toLowerCase();
+ if(e.includes("complet"))return'<span class="badge bg-green-100 text-green-800">Completado</span>';
+ if(e.includes("proceso")||e.includes("progres"))return'<span class="badge bg-yellow-100 text-yellow-800">En proceso</span>';
+ if(e.includes("retras"))return'<span class="badge bg-red-100 text-red-800">Retrasado</span>';
+ if(e.includes("reprogram"))return'<span class="badge bg-blue-100 text-blue-800">Reprogramado</span>';
+ return `<span class="badge bg-gray-100 text-gray-800">${e||"Pendiente"}</span>`;
+}
+
+async function main(){
+ try{
+   const {data,error}=await supabase.from(TABLE_NAME)
+     .select('anio_gestion,mes,componente,indicador,meta,porcentaje_cumplimiento,estado,actividad_principal,subactividad,tarea_especifica,responsable,evidencia_url')
+     .order('anio_gestion',{ascending:true});
+   if(error) throw error;
+   document.getElementById("connStatus").innerHTML='<span class="badge bg-green-100 text-green-800">OK</span> Conectado';
+   render(data);
+ }catch(err){
+   document.getElementById("connStatus").innerHTML=`<span class="badge bg-red-100 text-red-800">Error</span> ${err.message}`;
+ }
+}
+
+function render(data){
+ const tb=document.getElementById("tblIndicadores");
+ tb.innerHTML="";
+ data.forEach(r=>{
+  tb.insertAdjacentHTML("beforeend",`<tr class="border-b">
+   <td>${r.anio_gestion||""}</td>
+   <td>${r.indicador||""}</td>
+   <td>${r.meta||""}</td>
+   <td>${r.porcentaje_cumplimiento||""}%</td>
+   <td>${badgeEstado(r.estado)}</td></tr>`);
+ });
+}
+
+main();
+</script>
+</body>
+</html>
