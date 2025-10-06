@@ -39,6 +39,7 @@
 
     #chartBox{ width:100%; height:420px }
 
+    /* Tabla compacta */
     table{ width:100%; border-collapse:collapse; font-size:13px; }
     th, td{ border-top:1px solid var(--border); padding:6px 8px; text-align:left; vertical-align:top; }
     th{ background:#fafafa; font-size:13px; }
@@ -49,13 +50,25 @@
     .b-gray{ background:var(--giz-gray); }
     .b-blue{ background:var(--giz-blue); color:#fff; }
 
+    /* Barras de Componentes */
+    .prog{ margin-top:8px; height:8px; background:#eee; border-radius:999px; overflow:hidden; }
+    .prog-fill{ height:8px; background:#4169E1; } /* color sólido para imprimir mejor */
+
     .pagination{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-top:8px; font-size:13px; }
     .pagination button{ padding:6px 10px; border-radius:6px; font-weight:500; }
 
+    /* Imprimir / PDF */
     footer#print-footer{ display:none; }
+    img.print-canvas{ display:none; max-width:100%; height:auto; }
     @media print{
       @page{ size:A4 landscape; margin:14mm; }
       header .actions{ display:none !important; }
+      /* Fuerza colores de fondo en impresión */
+      *{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .prog, .prog-fill, .badge{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      /* Mostrar imagen del canvas y ocultar el canvas original */
+      canvas.hide-print{ display:none !important; }
+      img.print-canvas{ display:block !important; }
       footer#print-footer{ display:block; position:fixed; bottom:6mm; left:0; right:0; text-align:center; font-size:11px; color:#333; }
       .card{ break-inside:avoid; }
       .pagination{ display:none; }
@@ -135,7 +148,6 @@
             <tbody></tbody>
           </table>
         </div>
-
         <!-- Paginación -->
         <div class="pagination">
           <div>
@@ -262,8 +274,7 @@
         if (fResp.value && r.responsable!=fResp.value) return false;
         return true;
       });
-      // al cambiar filtros, volvemos a la primera página
-      currentPage=1;
+      currentPage=1; // reset paginación al filtrar
     }
 
     /* ===== 6) KPIs ===== */
@@ -299,9 +310,7 @@
             <div><div class="muted">Componente</div><div style="font-weight:700">${r.k}</div></div>
             <div style="text-align:right"><div class="muted">Promedio</div><div style="font-size:22px;font-weight:800">${r.prom.toFixed(1)}%</div><div class="muted">${r.n} registros</div></div>
           </div>
-          <div style="margin-top:8px;height:8px;background:#eee;border-radius:999px;overflow:hidden;">
-            <div style="height:8px;width:${Math.min(100,Math.max(0,r.prom)).toFixed(1)}%;background:rgba(65,105,225,.9)"></div>
-          </div>`;
+          <div class="prog"><div class="prog-fill" style="width:${Math.min(100,Math.max(0,r.prom)).toFixed(1)}%"></div></div>`;
         tgt.appendChild(card);
       }
     }
@@ -338,7 +347,7 @@
         data:{ labels:labelsShort, datasets:[{
           label:"% promedio de cumplimiento",
           data:values,
-          backgroundColor:"rgba(65,105,225,0.65)",
+          backgroundColor:"rgba(65,105,225,0.8)",
           borderColor:"rgba(65,105,225,1)",
           borderWidth:1.2, borderSkipped:false, barThickness:"flex"
         }]},
@@ -386,7 +395,6 @@
         tb.appendChild(tr);
       }
 
-      // Info + botones
       pageInfo.textContent = total ? `Mostrando ${start+1}–${end} de ${total} actividades` : "Sin registros";
       document.getElementById("prevPage").disabled = currentPage===1;
       document.getElementById("nextPage").disabled = end>=total;
@@ -422,7 +430,34 @@
       renderActividades();
     }
 
-    /* ===== 12) INIT + EVENTOS ===== */
+    /* ===== 12) PREPARAR IMPRESIÓN ===== */
+    let printPrepared = false;
+    let printPairs = []; // [{cv, img}]
+    function preparePrint(){
+      if (printPrepared) return;
+      printPrepared = true;
+      // Reemplaza cada canvas por una imagen para impresión
+      document.querySelectorAll("canvas").forEach(cv=>{
+        try{
+          const img = document.createElement("img");
+          img.src = cv.toDataURL("image/png");
+          img.className = "print-canvas";
+          img.alt = cv.getAttribute("aria-label") || "gráfico";
+          cv.classList.add("hide-print");
+          cv.insertAdjacentElement("afterend", img);
+          printPairs.push({cv, img});
+        }catch(e){ /* ignorar */ }
+      });
+      // Fecha en pie
+      document.getElementById("genDate").textContent = formatFechaBO(new Date());
+    }
+    function cleanupPrint(){
+      printPairs.forEach(({cv,img})=>{ img.remove(); cv.classList.remove("hide-print"); });
+      printPairs = [];
+      printPrepared = false;
+    }
+
+    /* ===== 13) INIT + EVENTOS ===== */
     async function init(){ await loadData(); fillFilterOptions(); renderAll(); }
     init();
 
@@ -440,13 +475,9 @@
     document.getElementById("nextPage").addEventListener("click", ()=> goPage(1));
 
     // Imprimir / PDF
-    document.getElementById("btnPrint").addEventListener("click", ()=>{
-      document.getElementById("genDate").textContent = formatFechaBO(new Date());
-      window.print();
-    });
-    window.addEventListener("beforeprint", ()=>{
-      document.getElementById("genDate").textContent = formatFechaBO(new Date());
-    });
+    document.getElementById("btnPrint").addEventListener("click", ()=>{ preparePrint(); window.print(); });
+    window.addEventListener("beforeprint", preparePrint);
+    window.addEventListener("afterprint", cleanupPrint);
   </script>
 </body>
 </html>
