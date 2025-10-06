@@ -2,77 +2,112 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>ProIgualdad – Dashboard</title>
+  <title>ProIgualdad – Dashboard (GIZ)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @media print { .no-print{display:none!important} .print-break{page-break-before:always} }
     .table-wrap{overflow:auto}
-    .badge{padding:.125rem .5rem;border-radius:9999px;font-size:.75rem;font-weight:600;display:inline-block}
+    .badge{padding:.2rem .6rem;border-radius:9999px;font-size:.75rem;font-weight:700;display:inline-block}
+    .kpi-card{border:1px solid #eee}
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
-<header class="bg-white shadow">
-  <div class="mx-auto max-w-7xl px-4 py-5">
-    <h1 class="text-2xl font-bold">Sistema de Monitoreo – ProIgualdad</h1>
-    <p class="text-sm text-gray-600">Dashboard conectado a Supabase</p>
-  </div>
-</header>
 
-<main class="mx-auto max-w-7xl px-4 py-6">
-  <section class="mb-4 no-print">
-    <div class="grid md:grid-cols-3 gap-3">
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h2 class="font-semibold mb-2">Conexión</h2>
-        <div class="text-xs text-gray-600">Credenciales ya configuradas.</div>
-        <div id="connStatus" class="mt-2 text-sm"></div>
+  <!-- Encabezado -->
+  <header class="bg-white border-b">
+    <div class="mx-auto max-w-7xl px-4 py-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Sistema de Monitoreo – ProIgualdad (GIZ)</h1>
+        <p class="mt-1 text-sm text-gray-600">Dashboard conectado a Supabase</p>
       </div>
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h2 class="font-semibold mb-2">Controles</h2>
-        <div class="flex gap-2 flex-wrap">
+      <div class="text-xs">
+        <span class="opacity-70">Conexión:</span>
+        <span id="connStatus" class="font-semibold">—</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6">
+
+    <!-- Controles + Filtros -->
+    <section class="no-print grid lg:grid-cols-3 gap-4">
+      <div class="rounded-xl bg-white shadow p-4">
+        <h2 class="font-semibold mb-3">Controles</h2>
+        <div class="flex flex-wrap gap-2">
           <button id="btnReload" class="px-3 py-2 rounded-lg bg-black text-white hover:bg-gray-800">Recargar</button>
           <button id="btnExport" class="px-3 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600">Exportar CSV</button>
-          <button id="btnPrint" class="px-3 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-500">Imprimir / PDF</button>
+          <button id="btnPrint"  class="px-3 py-2 rounded-lg bg-orange-600 text-white hover:opacity-90">Imprimir / PDF</button>
         </div>
       </div>
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h2 class="font-semibold mb-2">Filtros</h2>
-        <div class="grid grid-cols-2 gap-2">
-          <select id="fAnio" class="border rounded-lg px-2 py-1"><option value="">Año</option></select>
-          <select id="fComponente" class="border rounded-lg px-2 py-1"><option value="">Componente</option></select>
-          <select id="fEstado" class="border rounded-lg px-2 py-1"><option value="">Estado</option></select>
-          <select id="fMes" class="border rounded-lg px-2 py-1"><option value="">Mes</option></select>
-          <select id="fResp" class="border rounded-lg px-2 py-1 col-span-2"><option value="">Responsable</option></select>
+      <div class="rounded-xl bg-white shadow p-4 lg:col-span-2">
+        <h2 class="font-semibold mb-3">Filtros</h2>
+        <div class="grid md:grid-cols-5 gap-2">
+          <select id="fAnio" class="border rounded-lg px-2 py-2"><option value="">Año</option></select>
+          <select id="fComponente" class="border rounded-lg px-2 py-2"><option value="">Componente</option></select>
+          <select id="fEstado" class="border rounded-lg px-2 py-2"><option value="">Estado</option></select>
+          <select id="fMes" class="border rounded-lg px-2 py-2"><option value="">Mes</option></select>
+          <select id="fResp" class="border rounded-lg px-2 py-2"><option value="">Responsable</option></select>
         </div>
-        <div class="mt-2">
-          <button id="btnReset" class="text-sm underline text-gray-600">Limpiar filtros</button>
-        </div>
+        <button id="btnReset" class="mt-2 text-sm underline text-gray-600">Limpiar filtros</button>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="mb-4">
-    <div class="no-print bg-white rounded-xl p-2 shadow flex gap-2 flex-wrap">
-      <button data-tab="indicadores" class="tabbtn px-3 py-2 rounded-lg bg-black text-white">Indicadores</button>
-      <button data-tab="actividades" class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Actividades</button>
-      <button data-tab="cronograma"  class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Cronograma</button>
-      <button data-tab="componentes" class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Componentes</button>
-    </div>
-  </section>
-
-  <section id="tab-indicadores" class="tab">
-    <div class="grid lg:grid-cols-2 gap-4">
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h3 class="font-semibold mb-2">% Avance por Indicador</h3>
-        <canvas id="chartIndicadores" height="220"></canvas>
+    <!-- KPIs -->
+    <section class="mt-6 grid sm:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div class="kpi-card rounded-xl bg-white p-4">
+        <div class="text-xs text-gray-500">Total registros</div>
+        <div id="kpiTotal" class="text-2xl font-extrabold mt-1">0</div>
       </div>
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h3 class="font-semibold mb-3">Tabla de Indicadores</h3>
-        <div class="table-wrap">
-          <table class="min-w-full text-sm">
-            <thead>
+      <div class="kpi-card rounded-xl bg-white p-4">
+        <div class="text-xs text-gray-500">Cumplida exitosamente</div>
+        <div id="kpiCumplida" class="text-2xl font-extrabold mt-1">0</div>
+      </div>
+      <div class="kpi-card rounded-xl bg-white p-4">
+        <div class="text-xs text-gray-500">En proceso</div>
+        <div id="kpiProceso" class="text-2xl font-extrabold mt-1">0</div>
+      </div>
+      <div class="kpi-card rounded-xl bg-white p-4">
+        <div class="text-xs text-gray-500">Reprogramado</div>
+        <div id="kpiReprog" class="text-2xl font-extrabold mt-1">0</div>
+      </div>
+      <div class="kpi-card rounded-xl bg-white p-4">
+        <div class="text-xs text-gray-500">Atrasada/Interrumpida/En riesgo</div>
+        <div id="kpiRojo" class="text-2xl font-extrabold mt-1">0</div>
+      </div>
+      <div class="kpi-card rounded-xl bg-white p-4">
+        <div class="text-xs text-gray-500">No puede iniciar/concluir</div>
+        <div id="kpiGris" class="text-2xl font-extrabold mt-1">0</div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section class="mt-6">
+      <div class="no-print flex flex-wrap gap-2">
+        <button data-tab="indicadores" class="tabbtn px-3 py-2 rounded-lg bg-black text-white">Indicadores</button>
+        <button data-tab="actividades" class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Actividades</button>
+        <button data-tab="cronograma"  class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Cronograma</button>
+        <button data-tab="componentes" class="tabbtn px-3 py-2 rounded-lg hover:bg-gray-200">Componentes</button>
+      </div>
+    </section>
+
+    <!-- Indicadores -->
+    <section id="tab-indicadores" class="tab mt-4">
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="rounded-xl shadow bg-white p-4">
+          <h3 class="font-semibold mb-2">% Avance por Indicador</h3>
+          <canvas id="chartIndicadores" height="220"></canvas>
+        </div>
+        <div class="rounded-xl shadow bg-white p-4">
+          <h3 class="font-semibold mb-3">Tabla de Indicadores</h3>
+          <div class="table-wrap">
+            <table class="min-w-full text-sm">
+              <thead>
               <tr class="text-left border-b">
                 <th class="py-2 pr-3">Año</th>
                 <th class="py-2 pr-3">Indicador</th>
@@ -80,127 +115,409 @@
                 <th class="py-2 pr-3">% Cumpl.</th>
                 <th class="py-2 pr-3">Estado</th>
               </tr>
-            </thead>
-            <tbody id="tblIndicadores"></tbody>
-          </table>
+              </thead>
+              <tbody id="tblIndicadores"></tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="tab-actividades" class="tab hidden print-break">
-    <div class="bg-white rounded-xl p-4 shadow">
-      <h3 class="font-semibold mb-3">Actividades</h3>
-      <div class="table-wrap">
-        <table class="min-w-full text-sm">
-          <thead>
+    <!-- Actividades -->
+    <section id="tab-actividades" class="tab hidden mt-4 print-break">
+      <div class="rounded-xl shadow bg-white p-4">
+        <h3 class="font-semibold mb-3">Actividades (con evidencia)</h3>
+        <div class="table-wrap">
+          <table class="min-w-full text-sm">
+            <thead>
             <tr class="text-left border-b">
               <th class="py-2 pr-3">Año</th>
               <th class="py-2 pr-3">Componente</th>
               <th class="py-2 pr-3">Actividad Principal</th>
               <th class="py-2 pr-3">Subactividad</th>
-              <th class="py-2 pr-3">Tarea</th>
+              <th class="py-2 pr-3">Tarea específica</th>
+              <th class="py-2 pr-3">Descripción</th>
               <th class="py-2 pr-3">Mes</th>
               <th class="py-2 pr-3">Responsable</th>
               <th class="py-2 pr-3">Estado</th>
               <th class="py-2 pr-3">Evidencia</th>
             </tr>
-          </thead>
-          <tbody id="tblActividades"></tbody>
-        </table>
+            </thead>
+            <tbody id="tblActividades"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="tab-cronograma" class="tab hidden print-break">
-    <div class="bg-white rounded-xl p-4 shadow">
-      <h3 class="font-semibold mb-3">Cronograma</h3>
-      <div class="table-wrap">
-        <table class="min-w-full text-sm">
-          <thead>
+    <!-- Cronograma -->
+    <section id="tab-cronograma" class="tab hidden mt-4 print-break">
+      <div class="rounded-xl shadow bg-white p-4">
+        <h3 class="font-semibold mb-3">Cronograma (Mini-Gantt Mes × Actividad Principal)</h3>
+        <div class="table-wrap">
+          <table class="min-w-full text-sm">
+            <thead>
             <tr class="text-left border-b">
               <th class="py-2 pr-3">Actividad Principal</th>
               <th class="py-2 pr-3">Año</th>
               <th class="py-2 pr-3">Componente</th>
-              ${["E","F","M","A","M","J","J","A","S","O","N","D"].map(m=>`<th class="py-2 px-2">${m}</th>`).join("")}
+              <th class="py-2 px-2">E</th><th class="py-2 px-2">F</th><th class="py-2 px-2">M</th><th class="py-2 px-2">A</th>
+              <th class="py-2 px-2">M</th><th class="py-2 px-2">J</th><th class="py-2 px-2">J</th><th class="py-2 px-2">A</th>
+              <th class="py-2 px-2">S</th><th class="py-2 px-2">O</th><th class="py-2 px-2">N</th><th class="py-2 px-2">D</th>
             </tr>
-          </thead>
-          <tbody id="tblCronograma"></tbody>
-        </table>
+            </thead>
+            <tbody id="tblCronograma"></tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Cada celda marcada indica que hubo al menos una tarea en ese mes para esa Actividad Principal.</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="tab-componentes" class="tab hidden print-break">
-    <div class="grid lg:grid-cols-2 gap-4">
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h3 class="font-semibold mb-2">Promedio de % por Componente</h3>
-        <canvas id="chartComponentes" height="220"></canvas>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h3 class="font-semibold mb-3">Tabla de Componentes</h3>
-        <div class="table-wrap">
-          <table class="min-w-full text-sm">
-            <thead>
+    <!-- Componentes -->
+    <section id="tab-componentes" class="tab hidden mt-4 print-break">
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="rounded-xl shadow bg-white p-4">
+          <h3 class="font-semibold mb-2">Promedio de % por Componente</h3>
+          <canvas id="chartComponentes" height="220"></canvas>
+        </div>
+        <div class="rounded-xl shadow bg-white p-4">
+          <h3 class="font-semibold mb-3">Tabla agregada por Componente</h3>
+          <div class="table-wrap">
+            <table class="min-w-full text-sm">
+              <thead>
               <tr class="text-left border-b">
                 <th class="py-2 pr-3">Componente</th>
                 <th class="py-2 pr-3">Indicadores</th>
                 <th class="py-2 pr-3">Prom. %</th>
               </tr>
-            </thead>
-            <tbody id="tblComponentes"></tbody>
-          </table>
+              </thead>
+              <tbody id="tblComponentes"></tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
-</main>
+    </section>
 
-<footer class="mx-auto max-w-7xl px-4 py-6 text-xs text-gray-500">
-  ProIgualdad · GIZ Bolivia · Dashboard en GitHub Pages + Supabase
-</footer>
+  </main>
+
+  <footer class="mx-auto max-w-7xl px-4 py-6 text-xs text-gray-500">
+    ProIgualdad · GIZ Bolivia · Dashboard en GitHub Pages + Supabase
+  </footer>
 
 <script>
-const SUPABASE_URL="https://xrvxryozthadpzsgmbir.supabase.co";
-const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhydnhyeW96dGhhZHB6c2dtYmlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODA5NjcsImV4cCI6MjA3NDU1Njk2N30.mVDnVaJCiJzSEFJ2ZlHGrtbFk-DZNb61aDcrNf3KsHg";
-const TABLE_NAME="entradas_form";
-const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+/* ====== SUPABASE CONFIG ====== */
+const SUPABASE_URL = "https://xrvxryozthadpzsgmbir.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhydnhyeW96dGhhZHB6c2dtYmlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODA5NjcsImV4cCI6MjA3NDU1Njk2N30.mVDnVaJCiJzSEFJ2ZlHGrtbFk-DZNb61aDcrNf3KsHg";
+const TABLE_NAME = "entradas_form";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function badgeEstado(e){e=String(e||"").toLowerCase();
- if(e.includes("complet"))return'<span class="badge bg-green-100 text-green-800">Completado</span>';
- if(e.includes("proceso")||e.includes("progres"))return'<span class="badge bg-yellow-100 text-yellow-800">En proceso</span>';
- if(e.includes("retras"))return'<span class="badge bg-red-100 text-red-800">Retrasado</span>';
- if(e.includes("reprogram"))return'<span class="badge bg-blue-100 text-blue-800">Reprogramado</span>';
- return `<span class="badge bg-gray-100 text-gray-800">${e||"Pendiente"}</span>`;
+/* ====== HELPERS ====== */
+const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const mesToIdx = (m) => { if(!m) return -1; const s=String(m).trim().toLowerCase(); const n=Number(s); if(!isNaN(n)&&n>=1&&n<=12) return n-1; return meses.indexOf(s); };
+const fmtPct = (v)=> (v==null||v==="") ? "" : (Math.round(parseFloat(v)*10)/10) + "%";
+
+/* Badges exactos GIZ por estado */
+function badgeEstado(raw){
+  const e = String(raw||"").toLowerCase();
+
+  // matches amplios por si vienen variaciones
+  const isCumplida = /cumplid|exitos/i.test(e) || e === "cumplida exitosamente";
+  const isRojo = /atras|interrump|riesgo/i.test(e) || e === "atrasada, interrumpida o en riesgo";
+  const isProceso = /proceso/i.test(e) || e === "en proceso";
+  const isGris = /no puede iniciar|no puede concluir|no puede iniciar o concluir satisfactoriamente/i.test(e);
+  const isReprog = /reprogram/i.test(e) || e === "reprogramado";
+
+  if (isCumplida)    return '<span class="badge" style="background:#7FFF00;color:#000">Cumplida exitosamente</span>';
+  if (isRojo)        return '<span class="badge" style="background:#FF0000;color:#fff">Atrasada/Interrumpida/En riesgo</span>';
+  if (isProceso)     return '<span class="badge" style="background:#FFFF00;color:#000">En proceso</span>';
+  if (isGris)        return '<span class="badge" style="background:#C0C0C0;color:#000">No puede iniciar/concluir</span>';
+  if (isReprog)      return '<span class="badge" style="background:#4169E1;color:#fff">Reprogramado</span>';
+  // por defecto
+  return `<span class="badge bg-gray-200 text-gray-800">${raw||"—"}</span>`;
 }
 
+function uniqueSorted(arr){
+  return [...new Set(arr.filter(Boolean))].sort((a,b)=>{
+    const na=Number(a), nb=Number(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb;
+    const ia=mesToIdx(a), ib=mesToIdx(b); if(ia>=0&&ib>=0) return ia-ib;
+    return String(a).localeCompare(String(b));
+  });
+}
+
+/* ====== STATE ====== */
+let RAW=[], FILT=[], chartIndic=null, chartComp=null;
+
+/* ====== LOAD ====== */
+async function testConnection(){
+  try{
+    const { error } = await supabase.from(TABLE_NAME).select('count').limit(1);
+    if (error) throw error;
+    document.getElementById('connStatus').textContent = 'OK';
+  }catch(err){
+    document.getElementById('connStatus').textContent = `Error: ${err.message}`;
+  }
+}
+async function fetchAll(){
+  const cols = [
+    'anio_gestion','mes','componente','objetivo','indicador','actividad_principal','subactividad',
+    'tarea_especifica','descripcion','responsable','meta','porcentaje_cumplimiento','estado','evidencia_url'
+  ];
+  const { data, error } = await supabase
+    .from(TABLE_NAME)
+    .select(cols.join(','))
+    .order('anio_gestion', { ascending:true })
+    .order('mes', { ascending:true });
+  if (error) throw error;
+  RAW = data || [];
+}
+
+/* ====== FILTERS ====== */
+function applyFilters(){
+  const anio = document.getElementById('fAnio').value;
+  const comp = document.getElementById('fComponente').value;
+  const est  = document.getElementById('fEstado').value;
+  const mes  = document.getElementById('fMes').value;
+  const resp = document.getElementById('fResp').value;
+
+  FILT = RAW.filter(r=>{
+    if (anio && String(r.anio_gestion)!==anio) return false;
+    if (comp && String(r.componente)!==comp) return false;
+    if (est  && String(r.estado)!==est) return false;
+    if (mes  && String(r.mes)!==mes) return false;
+    if (resp && String(r.responsable)!==resp) return false;
+    return true;
+  });
+}
+function populateFilterOptions(){
+  const by = k => uniqueSorted(RAW.map(r=>r[k]));
+  const set = (id, arr, label)=>{
+    const el=document.getElementById(id); const sel=el.value;
+    el.innerHTML = `<option value="">${label}</option>` + arr.map(v=>`<option>${v}</option>`).join('');
+    if (arr.includes(sel)) el.value = sel;
+  };
+  set('fAnio', by('anio_gestion'), 'Año');
+  set('fComponente', by('componente'), 'Componente');
+  set('fEstado', by('estado'), 'Estado');
+  set('fMes', uniqueSorted(RAW.map(r=>r.mes)), 'Mes');
+  set('fResp', by('responsable'), 'Responsable');
+}
+
+/* ====== KPIs ====== */
+function renderKPIs(){
+  const total = FILT.length;
+  const toL = s => String(s||"").toLowerCase();
+  const count = (fn)=> FILT.filter(fn).length;
+
+  const nCumplida = count(r => /cumplid|exitos/i.test(toL(r.estado)) || toL(r.estado)==="cumplida exitosamente");
+  const nProc     = count(r => /proceso/i.test(toL(r.estado)) || toL(r.estado)==="en proceso");
+  const nReprog   = count(r => /reprogram/i.test(toL(r.estado)) || toL(r.estado)==="reprogramado");
+  const nRojo     = count(r => /atras|interrump|riesgo/i.test(toL(r.estado)) || toL(r.estado)==="atrasada, interrumpida o en riesgo");
+  const nGris     = count(r => /no puede iniciar|no puede concluir|no puede iniciar o concluir satisfactoriamente/i.test(toL(r.estado)));
+
+  document.getElementById('kpiTotal').textContent    = total;
+  document.getElementById('kpiCumplida').textContent = nCumplida;
+  document.getElementById('kpiProceso').textContent  = nProc;
+  document.getElementById('kpiReprog').textContent   = nReprog;
+  document.getElementById('kpiRojo').textContent     = nRojo;
+  document.getElementById('kpiGris').textContent     = nGris;
+}
+
+/* ====== INDICADORES ====== */
+function renderIndicadores(){
+  const tb=document.getElementById('tblIndicadores'); tb.innerHTML='';
+  // agrupar por indicador + año
+  const rows = {};
+  FILT.forEach(r=>{
+    if(!r.indicador) return;
+    const key = `${r.anio_gestion}||${r.indicador}`;
+    const pct = (r.porcentaje_cumplimiento==null||r.porcentaje_cumplimiento==="") ? null : parseFloat(r.porcentaje_cumplimiento);
+    if(!rows[key]) rows[key] = {anio:r.anio_gestion, ind:r.indicador, meta:r.meta, pcts:[], est:r.estado||""};
+    if(pct!=null && !isNaN(pct)) rows[key].pcts.push(pct);
+    if (r.meta!=null) rows[key].meta = r.meta; // último valor
+    if (r.estado) rows[key].est = r.estado;
+  });
+  const arr = Object.values(rows).sort((a,b)=> (a.anio-b.anio) || String(a.ind).localeCompare(String(b.ind)));
+
+  arr.forEach(x=>{
+    const avg = x.pcts.length ? (x.pcts.reduce((s,v)=>s+v,0)/x.pcts.length) : null;
+    tb.insertAdjacentHTML('beforeend', `
+      <tr class="border-b last:border-0">
+        <td class="py-2 pr-3">${x.anio??""}</td>
+        <td class="py-2 pr-3">${x.ind??""}</td>
+        <td class="py-2 pr-3">${x.meta??""}</td>
+        <td class="py-2 pr-3">${avg==null?"":fmtPct(avg)}</td>
+        <td class="py-2 pr-3">${badgeEstado(x.est)}</td>
+      </tr>
+    `);
+  });
+
+  const labels = arr.map(x=> `${x.anio??""} · ${x.ind??""}`);
+  const values = arr.map(x=> {
+    const avg = x.pcts.length ? (x.pcts.reduce((s,v)=>s+v,0)/x.pcts.length) : 0;
+    return Math.round(avg*10)/10;
+  });
+
+  const ctx = document.getElementById('chartIndicadores').getContext('2d');
+  if (chartIndic) chartIndic.destroy();
+  chartIndic = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'% Cumplimiento', data: values }]},
+    options:{ responsive:true, plugins:{ legend:{display:true}}, scales:{ y:{ beginAtZero:true, max:100 } } }
+  });
+}
+
+/* ====== ACTIVIDADES ====== */
+function renderActividades(){
+  const tb=document.getElementById('tblActividades'); tb.innerHTML='';
+  const sorted=[...FILT].sort((a,b)=>{
+    const y=Number(a.anio_gestion)-Number(b.anio_gestion); if(y!==0) return y;
+    const m=mesToIdx(a.mes)-mesToIdx(b.mes); if(m!==0) return m;
+    const c=String(a.componente||"").localeCompare(String(b.componente||"")); if(c!==0) return c;
+    return String(a.actividad_principal||"").localeCompare(String(b.actividad_principal||""));
+  });
+  sorted.forEach(r=>{
+    const ev = r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-blue-600 underline">Ver</a>` : '';
+    tb.insertAdjacentHTML('beforeend', `
+      <tr class="border-b last:border-0">
+        <td class="py-2 pr-3">${r.anio_gestion??""}</td>
+        <td class="py-2 pr-3">${r.componente??""}</td>
+        <td class="py-2 pr-3">${r.actividad_principal??""}</td>
+        <td class="py-2 pr-3">${r.subactividad??""}</td>
+        <td class="py-2 pr-3">${r.tarea_especifica??""}</td>
+        <td class="py-2 pr-3">${r.descripcion??""}</td>
+        <td class="py-2 pr-3">${r.mes??""}</td>
+        <td class="py-2 pr-3">${r.responsable??""}</td>
+        <td class="py-2 pr-3">${badgeEstado(r.estado)}</td>
+        <td class="py-2 pr-3">${ev}</td>
+      </tr>
+    `);
+  });
+}
+
+/* ====== CRONOGRAMA ====== */
+function renderCronograma(){
+  const tb=document.getElementById('tblCronograma'); tb.innerHTML='';
+  const map = new Map();
+  FILT.forEach(r=>{
+    const key = `${r.actividad_principal}||${r.anio_gestion}||${r.componente}`;
+    if(!map.has(key)) map.set(key, {act:r.actividad_principal, anio:r.anio_gestion, comp:r.componente, months:new Set()});
+    const i = mesToIdx(r.mes); if(i>=0) map.get(key).months.add(i);
+  });
+  const rows = [...map.values()].sort((a,b)=>{
+    const c=String(a.comp||"").localeCompare(String(b.comp||"")); if(c!==0) return c;
+    const y=Number(a.anio)-Number(b.anio); if(y!==0) return y;
+    return String(a.act||"").localeCompare(String(b.act||""));
+  });
+  rows.forEach(x=>{
+    const cells = Array.from({length:12},(_,i)=> x.months.has(i) ? '<div class="h-2 rounded bg-black"></div>' : '');
+    tb.insertAdjacentHTML('beforeend', `
+      <tr class="border-b last:border-0 align-middle">
+        <td class="py-2 pr-3">${x.act??""}</td>
+        <td class="py-2 pr-3">${x.anio??""}</td>
+        <td class="py-2 pr-3">${x.comp??""}</td>
+        ${cells.map(c=>`<td class="py-2 px-2">${c}</td>`).join('')}
+      </tr>
+    `);
+  });
+}
+
+/* ====== COMPONENTES ====== */
+function renderComponentes(){
+  const tb=document.getElementById('tblComponentes'); tb.innerHTML='';
+  const cmp = new Map();
+  FILT.forEach(r=>{
+    const k = r.componente || "—";
+    const pct = (r.porcentaje_cumplimiento==null||r.porcentaje_cumplimiento==="") ? null : parseFloat(r.porcentaje_cumplimiento);
+    if(!cmp.has(k)) cmp.set(k, {inds:new Set(), pcts:[]});
+    if(r.indicador) cmp.get(k).inds.add(`${r.anio_gestion}||${r.indicador}`);
+    if(pct!=null && !isNaN(pct)) cmp.get(k).pcts.push(pct);
+  });
+  const data = [...cmp.entries()].map(([k,v])=>{
+    const prom = v.pcts.length ? v.pcts.reduce((s,x)=>s+x,0)/v.pcts.length : 0;
+    return { comp:k, indicadores:v.inds.size, promPct:prom };
+  }).sort((a,b)=> String(a.comp).localeCompare(String(b.comp)));
+
+  data.forEach(d=>{
+    tb.insertAdjacentHTML('beforeend', `
+      <tr class="border-b last:border-0">
+        <td class="py-2 pr-3">${d.comp}</td>
+        <td class="py-2 pr-3">${d.indicadores}</td>
+        <td class="py-2 pr-3">${fmtPct(d.promPct)}</td>
+      </tr>
+    `);
+  });
+
+  const labels=data.map(d=>d.comp);
+  const values=data.map(d=>Math.round(d.promPct*10)/10);
+  const ctx=document.getElementById('chartComponentes').getContext('2d');
+  if(chartComp) chartComp.destroy();
+  chartComp = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Prom. % cumplimiento', data: values }]},
+    options:{ responsive:true, plugins:{ legend:{display:true}}, scales:{ y:{ beginAtZero:true, max:100 } } }
+  });
+}
+
+/* ====== EXPORT ====== */
+function exportCSV(){
+  const cols=['anio_gestion','mes','componente','objetivo','indicador','actividad_principal','subactividad','tarea_especifica','descripcion','responsable','meta','porcentaje_cumplimiento','estado','evidencia_url'];
+  const esc = v => { const s=(v==null)?"":String(v); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
+  const lines=[cols.join(',')].concat(FILT.map(r=> cols.map(c=>esc(r[c])).join(',')));
+  const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='proigualdad_export.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+/* ====== TABS ====== */
+function initTabs(){
+  const btns=document.querySelectorAll('.tabbtn');
+  const sections={
+    indicadores:document.getElementById('tab-indicadores'),
+    actividades:document.getElementById('tab-actividades'),
+    cronograma: document.getElementById('tab-cronograma'),
+    componentes:document.getElementById('tab-componentes'),
+  };
+  btns.forEach(b=>{
+    b.addEventListener('click', ()=>{
+      btns.forEach(x=> x.classList.remove('bg-black','text-white'));
+      b.classList.add('bg-black','text-white');
+      const tab=b.dataset.tab;
+      Object.entries(sections).forEach(([k,el])=>{
+        if(k===tab) el.classList.remove('hidden'); else el.classList.add('hidden');
+      });
+    });
+  });
+}
+
+/* ====== START ====== */
 async function main(){
- try{
-   const {data,error}=await supabase.from(TABLE_NAME)
-     .select('anio_gestion,mes,componente,indicador,meta,porcentaje_cumplimiento,estado,actividad_principal,subactividad,tarea_especifica,responsable,evidencia_url')
-     .order('anio_gestion',{ascending:true});
-   if(error) throw error;
-   document.getElementById("connStatus").innerHTML='<span class="badge bg-green-100 text-green-800">OK</span> Conectado';
-   render(data);
- }catch(err){
-   document.getElementById("connStatus").innerHTML=`<span class="badge bg-red-100 text-red-800">Error</span> ${err.message}`;
- }
+  await testConnection();
+  await fetchAll();
+  populateFilterOptions();
+  applyFilters();
+  renderKPIs();
+  renderIndicadores();
+  renderActividades();
+  renderCronograma();
+  renderComponentes();
 }
 
-function render(data){
- const tb=document.getElementById("tblIndicadores");
- tb.innerHTML="";
- data.forEach(r=>{
-  tb.insertAdjacentHTML("beforeend",`<tr class="border-b">
-   <td>${r.anio_gestion||""}</td>
-   <td>${r.indicador||""}</td>
-   <td>${r.meta||""}</td>
-   <td>${r.porcentaje_cumplimiento||""}%</td>
-   <td>${badgeEstado(r.estado)}</td></tr>`);
- });
-}
+document.getElementById('btnReload').addEventListener('click', main);
+document.getElementById('btnExport').addEventListener('click', exportCSV);
+document.getElementById('btnPrint').addEventListener('click', ()=>window.print());
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  ['fAnio','fComponente','fEstado','fMes','fResp'].forEach(id=> document.getElementById(id).value="");
+  applyFilters(); renderKPIs(); renderIndicadores(); renderActividades(); renderCronograma(); renderComponentes();
+});
+['fAnio','fComponente','fEstado','fMes','fResp'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{
+    applyFilters(); renderKPIs(); renderIndicadores(); renderActividades(); renderCronograma(); renderComponentes();
+  });
+});
 
-main();
+initTabs();
+main().catch(err=>{
+  console.error(err);
+  document.getElementById('connStatus').textContent = `Error: ${err.message}`;
+});
 </script>
 </body>
 </html>
